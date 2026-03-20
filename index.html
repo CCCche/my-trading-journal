@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>量化交易日志追踪系统 v22.0</title>
+    <title>量化交易日志追踪系统 v22.0 (终极稳定版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -33,6 +33,11 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .drag-active { outline: 2px dashed #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
         textarea { transition: height 0.2s ease, min-height 0.2s ease; }
+        
+        /* 表格拖拽调宽功能样式 */
+        th.resizable { position: relative; }
+        .resizer { position: absolute; top: 0; right: 0; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; transition: background 0.2s; }
+        .resizer:hover, .resizer.active { background-color: #3b82f6; opacity: 0.5; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 font-sans min-h-screen p-4 md:p-6 lg:p-8 transition-colors duration-300">
@@ -41,7 +46,7 @@
         
         <header class="flex flex-wrap items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 gap-4">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-blue-500 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded ml-2">V22 完美重构版</span>
+                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-blue-500 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded ml-2">V22 终极稳定版</span>
             </h1>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="toggleDarkMode()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
@@ -71,10 +76,8 @@
                 <i class="fa-solid fa-chevron-up text-gray-400 transition-transform duration-300" id="dash-collapse-icon"></i>
             </div>
             <div class="p-5 flex flex-col gap-4">
-                <div id="dash-main-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    </div>
-                <div id="dash-advanced-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    </div>
+                <div id="dash-main-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+                <div id="dash-advanced-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             </div>
         </section>
 
@@ -241,8 +244,8 @@
                     <div class="flex items-center gap-4">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white"><i class="fa-solid fa-filter mr-2 text-rose-500"></i>记录与筛选</h2>
                         <div class="flex bg-gray-200/60 dark:bg-gray-700 p-1 rounded-lg">
-                            <button id="btn-view-table" onclick="switchViewMode('table')" class="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm transition-all">表格视图</button>
-                            <button id="btn-view-notes" onclick="switchViewMode('notes')" class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">复盘笔记</button>
+                            <button id="btn-view-table" onclick="switchViewMode('table')" class="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm transition-all"><i class="fa-solid fa-table mr-1"></i>表格视图</button>
+                            <button id="btn-view-notes" onclick="switchViewMode('notes')" class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all"><i class="fa-solid fa-book-open mr-1"></i>复盘笔记</button>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2 text-sm">
@@ -267,14 +270,14 @@
 
             <div id="filter-section-wrapper" class="hidden flex-col border-b border-blue-100 dark:border-blue-900">
                 <div class="px-6 py-3 bg-blue-50/80 dark:bg-blue-900/20 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">筛选笔数:</span><span id="fs-count" class="font-bold text-gray-900 dark:text-gray-100">0</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">胜率:</span><span id="fs-winrate" class="font-bold text-gray-900 dark:text-gray-100">0.00%</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">盈亏比:</span><span id="fs-wlratio" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">盈利因子:</span><span id="fs-profit-factor" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">最大回撤:</span><span id="fs-maxdrawdown" class="font-bold text-rose-500">0.00</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">夏普:</span><span id="fs-sharpe" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">期望:</span><span id="fs-expectancy" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><i class="fa-solid fa-wallet text-emerald-400 mr-1"></i><span class="text-gray-500 dark:text-gray-400 mr-1">净利润:</span><span id="fs-pnl" class="font-bold">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-hashtag text-blue-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">筛选笔数:</span><span id="fs-count" class="font-bold text-gray-900 dark:text-gray-100">0</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-percent text-purple-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">胜率:</span><span id="fs-winrate" class="font-bold text-gray-900 dark:text-gray-100">0.00%</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-scale-balanced text-orange-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">盈亏比:</span><span id="fs-wlratio" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-bolt text-yellow-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">盈利因子:</span><span id="fs-profit-factor" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-water text-rose-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">最大回撤:</span><span id="fs-maxdrawdown" class="font-bold text-rose-500">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-chart-simple text-indigo-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">夏普:</span><span id="fs-sharpe" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-bullseye text-teal-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">期望:</span><span id="fs-expectancy" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-wallet text-emerald-400 mr-1.5"></i><span class="text-gray-500 dark:text-gray-400 mr-1">净利润:</span><span id="fs-pnl" class="font-bold">0.00</span></div>
                     <div class="ml-auto w-full sm:w-auto mt-2 sm:mt-0 flex justify-end">
                         <button onclick="toggleFilterChart()" id="btn-toggle-fchart" class="text-xs px-3 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-50 dark:hover:bg-gray-700 transition flex items-center shadow-sm">
                             <i class="fa-solid fa-chevron-down mr-1" id="icon-toggle-fchart"></i>展开筛选曲线
@@ -292,7 +295,7 @@
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
                         <tr class="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider" id="table-header">
-                            </tr>
+                        </tr>
                     </thead>
                     <tbody id="table-body" class="text-sm divide-y divide-gray-100 dark:divide-gray-700"></tbody>
                 </table>
@@ -435,7 +438,6 @@
     </div>
 
     <script>
-        // 将顶层所需的操作函数全部显式绑定到 window 上，防止被作用域隔离
         window.exportData = function() {
             if(trades.length === 0) { alert("当前没有可导出的数据！"); return; }
             const dataStr = JSON.stringify(trades, null, 2);
@@ -444,7 +446,6 @@
             const a = document.createElement('a'); 
             a.href = url;
             a.download = `交易记录_${new Date().toISOString().slice(0,10)}.json`;
-            // 必须 appendChild 才能在所有高安全性浏览器(如Firefox/Edge)中安全触发下载
             document.body.appendChild(a); 
             a.click(); 
             document.body.removeChild(a);
@@ -453,7 +454,7 @@
 
         window.deleteTrade = async function(id) {
             if(confirm('确定删除此记录吗？')) { 
-                id = Number(id); // 强制转为数字，绝不报错
+                id = Number(id); 
                 trades = trades.filter(t => t.id !== id); 
                 await StorageEngine.delete(id, trades); 
                 renderApp(); 
@@ -462,7 +463,7 @@
 
         window.clearAllData = async function() {
             if(confirm('警告：清空不可恢复！确认吗？')) { 
-                trades = []; 
+                trades =[]; 
                 await StorageEngine.clear(); 
                 renderApp(); 
             }
@@ -500,7 +501,6 @@
             reader.readAsText(file);
         };
 
-        // --- 1. 暗黑模式与系统色彩控制 ---
         function applyTheme(theme) {
             if (theme === 'dark') {
                 document.documentElement.classList.add('dark');
@@ -525,7 +525,7 @@
             else if (window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
         })();
 
-        // --- 2. 智能双核存储引擎 (深度隔离报错) ---
+        // ================= 彻底修复漏洞的双核存储引擎 =================
         const DB_NAME = 'QuantJournalDB_v22';
         const STORE_NAME = 'trades';
         const STORAGE_KEY = 'crypto_trading_journal_v22_fallback';
@@ -560,21 +560,47 @@
             },
             getAll: function() {
                 return new Promise((resolve) => {
-                    let fallbackData = [];
-                    try { fallbackData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) {}
-                    if (!this.useIDB || !this.db) { resolve(fallbackData); return; }
+                    let fallbackData =[];
+                    try { fallbackData = JSON.parse(localStorage.getItem(STORAGE_KEY)) ||[]; } catch(e) {}
+                    
+                    if (!this.useIDB || !this.db) { 
+                        // IDB 不可用，仅返回备用存储数据
+                        resolve(fallbackData.sort((a,b)=>b.id - a.id)); 
+                        return; 
+                    }
+                    
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readonly');
                         const req = tx.objectStore(STORE_NAME).getAll();
+                        
                         req.onsuccess = () => {
-                            const result = req.result || [];
-                            const merged = [...result, ...fallbackData];
-                            const unique = []; const ids = new Set();
-                            merged.forEach(t => { if(!ids.has(t.id)) { unique.push(t); ids.add(t.id); } });
-                            resolve(unique.sort((a,b)=>b.id - a.id));
+                            let result = req.result ||[];
+                            
+                            // 【核心修复点】: 发现 LocalStorage 遗留数据，强行迁入 IDB 并清除 LocalStorage
+                            if (fallbackData.length > 0) {
+                                console.log("检测到 LocalStorage 旧数据，正在平滑迁移至 IndexedDB...");
+                                
+                                const merged =[...result, ...fallbackData];
+                                const uniqueMap = new Map();
+                                merged.forEach(t => uniqueMap.set(t.id, t));
+                                result = Array.from(uniqueMap.values());
+                                
+                                try {
+                                    const writeTx = this.db.transaction(STORE_NAME, 'readwrite');
+                                    const store = writeTx.objectStore(STORE_NAME);
+                                    result.forEach(t => store.put(t));
+                                    writeTx.oncomplete = () => {
+                                        // 迁移完成，彻底铲除幽灵数据，释放 5MB 空间
+                                        localStorage.removeItem(STORAGE_KEY);
+                                        console.log("数据迁移完成，LocalStorage 内存已彻底释放！");
+                                    };
+                                } catch(e) { console.warn("迁移写入 IDB 失败", e); }
+                            }
+                            
+                            resolve(result.sort((a,b)=>b.id - a.id));
                         };
-                        req.onerror = () => resolve(fallbackData);
-                    } catch(e) { resolve(fallbackData); }
+                        req.onerror = () => resolve(fallbackData.sort((a,b)=>b.id - a.id));
+                    } catch(e) { resolve(fallbackData.sort((a,b)=>b.id - a.id)); }
                 });
             },
             saveAllToFallback: function(dataArray) {
@@ -593,7 +619,11 @@
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).put(trade);
-                        tx.oncomplete = () => resolve();
+                        tx.oncomplete = () => {
+                            // 防御性操作：避免 localStorage 内存留脏数据
+                            localStorage.removeItem(STORAGE_KEY);
+                            resolve();
+                        };
                         tx.onerror = () => { 
                             this.useIDB = false; 
                             try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); }
@@ -614,7 +644,10 @@
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         const store = tx.objectStore(STORE_NAME);
                         dataArray.forEach(t => store.put(t));
-                        tx.oncomplete = () => resolve();
+                        tx.oncomplete = () => {
+                            localStorage.removeItem(STORAGE_KEY);
+                            resolve();
+                        };
                         tx.onerror = () => {
                             this.useIDB = false;
                             try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); }
@@ -631,7 +664,11 @@
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).delete(id);
-                        tx.oncomplete = () => resolve();
+                        tx.oncomplete = () => {
+                            // 防御性操作：防止删除后从 LS 幽灵复活
+                            localStorage.removeItem(STORAGE_KEY);
+                            resolve();
+                        };
                         tx.onerror = () => {
                             this.useIDB = false;
                             try { this.saveAllToFallback(allTradesMemory); } catch(e){}
@@ -658,7 +695,6 @@
             }
         };
 
-        // --- 3. 配置全局状态 (含防爆机制) ---
         let settings = {};
         try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) { console.warn("LocalStorage 禁止访问"); }
         
@@ -671,16 +707,15 @@
         settings.strategies = settings.strategies || "Lorentzian Classification, MACD, SuperTrend, Price Action, 其他";
         settings.tagsPresets = settings.tagsPresets || "FOMO, 左侧摸底, 右侧突破, 疲劳交易";
 
-        let trades = []; 
+        let trades =[]; 
         let pnlChartInstance = null;
         let filterPnlChartInstance = null; 
         let filterChartOpen = false;       
         let currentCalDate = new Date(); 
-        let pendingImages = []; 
+        let pendingImages =[]; 
         let editingTradeId = null;
         let currentViewMode = 'table'; 
 
-        // --- 4. 极致安全的容错 JSON 解析器 ---
         function safeJSONParse(str) {
             try { return JSON.parse(str); }
             catch (e) {
@@ -701,8 +736,8 @@
 
         function migrateLegacyData(dataArray) {
             return dataArray.map(t => {
-                if ('image' in t) { t.images = (t.image && typeof t.image === 'string') ? [t.image] : []; delete t.image; }
-                if (!Array.isArray(t.images)) t.images = [];
+                if ('image' in t) { t.images = (t.image && typeof t.image === 'string') ? [t.image] :[]; delete t.image; }
+                if (!Array.isArray(t.images)) t.images =[];
                 t.tags = t.tags || ''; t.entryTime = t.entryTime || ''; t.exitTime = t.exitTime || '';
                 t.date = t.date || '2023-01-01'; t.exchange = t.exchange || ''; t.ticker = t.ticker || '-';
                 t.strategy = t.strategy || ''; t.direction = t.direction || 'long'; t.pnlType = t.pnlType || 'BE'; t.notes = t.notes || '-';
@@ -711,7 +746,6 @@
                 t.exitPrice = parseFloat(t.exitPrice) || 0; t.fee = parseFloat(t.fee) || 0; t.rebate = parseFloat(t.rebate) || 0;
                 t.fundingFee = parseFloat(t.fundingFee) || 0; t.grossPnl = parseFloat(t.grossPnl) || 0; t.netPnl = parseFloat(t.netPnl) || 0;
                 
-                // 确保有绝对安全的数字 ID
                 if (!t.id || isNaN(Number(t.id))) t.id = Date.now() + Math.floor(Math.random()*1000);
                 else t.id = Number(t.id);
 
@@ -719,15 +753,14 @@
             });
         }
 
-        // --- 5. 核心计算与格式化 ---
         function getExchangesConfig() {
             const lines = (settings.exchanges || '').split('\n');
-            const result = [];
+            const result =[];
             lines.forEach(line => {
                 const parts = line.split('|').map(p => p.trim());
                 if(parts.length >= 1 && parts[0]) result.push({ name: parts[0], feeRate: parseFloat(parts[1]) || 0, rebateRate: parseFloat(parts[2]) || 0 });
             });
-            return result.length ? result : [{name: 'Default', feeRate: 0.04, rebateRate: 20}];
+            return result.length ? result :[{name: 'Default', feeRate: 0.04, rebateRate: 20}];
         }
 
         function calculateTradeData(exchangeName, direction, margin, leverage, actualEntry, exitPrice, fundingFee) {
@@ -750,7 +783,7 @@
             const chrono = [...dataArray].sort((a,b) => a.id - b.id);
             let peak = 0, currentCumulative = 0, maxDrawdown = 0;
             let currentWinS = 0, maxWinS = 0, currentLossS = 0, maxLossS = 0;
-            let returns = [];
+            let returns =[];
 
             chrono.forEach(t => {
                 const pnl = t.netPnl;
@@ -802,7 +835,6 @@
             return `${days}天 ${remainH}小时`;
         }
 
-        // --- 6. 渲染层 (动态看板与折叠) ---
         let dashboardCollapsed = false;
         window.toggleDashboardCollapse = function() {
             dashboardCollapsed = !dashboardCollapsed;
@@ -822,7 +854,6 @@
             const mainRow = document.getElementById('dash-main-row');
             const advRow = document.getElementById('dash-advanced-row');
 
-            // 核心第一行始终显示
             let mainHtml = `
                 <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between shadow-sm hover:shadow-md transition">
                     <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">历史总笔数</p><p class="text-xl font-bold dark:text-white">${stats.total}</p></div>
@@ -852,7 +883,6 @@
             </div>`;
             mainRow.innerHTML = mainHtml;
 
-            // 高阶第二行按配置显示
             let advHtml = '';
             if(settings.dashboard.maxDrawdown) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大回撤</p><p class="text-xl font-bold text-rose-500">-$${stats.maxDrawdown}</p></div><div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-500"><i class="fa-solid fa-water"></i></div></div>`;
             if(settings.dashboard.sharpe) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">夏普比率</p><p class="text-xl font-bold dark:text-white">${stats.sharpe}</p></div><div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500"><i class="fa-solid fa-chart-simple"></i></div></div>`;
@@ -861,7 +891,6 @@
             
             advRow.innerHTML = advHtml;
 
-            // 智能隐藏折叠按钮
             const toggleIcon = document.getElementById('dash-collapse-icon');
             if(advHtml === '') {
                 toggleIcon.style.display = 'none';
@@ -875,7 +904,6 @@
             }
         }
 
-        // --- 7. 设置弹窗与预设逻辑 ---
         function updateFormPresets() {
             const tickerList = document.getElementById('ticker-list');
             tickerList.innerHTML = '';
@@ -960,7 +988,6 @@
             updateFilteredView(); 
         }
 
-        // --- 多图片处理 ---
         function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -1032,7 +1059,6 @@
             document.getElementById('viewer-img').src = '';
         }
 
-        // --- 8. 表单联动推算逻辑 ---
         let optionalFieldsOpen = false;
         window.toggleOptionalFields = function() {
             optionalFieldsOpen = !optionalFieldsOpen;
@@ -1103,9 +1129,8 @@
         }
         function onMarginManualInput() { document.getElementById('targetNetPnl').value = ''; autoUpdatePnlType(); }
 
-        // --- 9. 编辑与表单提交逻辑 (超强容错版) ---
         window.editTrade = function(id) {
-            id = Number(id); // 保证类型绝对安全
+            id = Number(id); 
             const t = trades.find(item => item.id === id);
             if(!t) return;
             editingTradeId = id;
@@ -1128,7 +1153,6 @@
             document.getElementById('notes').rows = Math.max(6, document.getElementById('notes').value.split('\n').length);
             pendingImages = [...(t.images || [])]; renderImagePreviews();
             
-            // 编辑时若包含高级选项，则自动展开
             if ((t.entryTime || t.exitTime || t.tags) && !optionalFieldsOpen) {
                 toggleOptionalFields();
             }
@@ -1146,9 +1170,9 @@
             document.getElementById('trade-form').reset();
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('exchange').value = getExchangesConfig()[0].name;
-            pendingImages = []; renderImagePreviews(); document.getElementById('notes').rows = 2;
+            pendingImages =[]; renderImagePreviews(); document.getElementById('notes').rows = 2;
             
-            if (optionalFieldsOpen) toggleOptionalFields(); // 恢复收起状态
+            if (optionalFieldsOpen) toggleOptionalFields(); 
 
             document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2 text-emerald-500"></i>录入新交易';
             document.getElementById('form-section').classList.remove('ring-2', 'ring-blue-400', 'shadow-lg');
@@ -1157,11 +1181,9 @@
             document.getElementById('icon-submit').className = 'fa-solid fa-plus mr-2';
         }
 
-        // 绑定最核心的提交事件 (置于初始化函数中，确保最高执行权限)
         function attachEvents() {
             document.getElementById('actualEntry').addEventListener('input', autoDetectDirection);
-            document.getElementById('exitPrice').addEventListener('input', autoDetectDirection);
-            ['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
+            document.getElementById('exitPrice').addEventListener('input', autoDetectDirection);['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
             document.getElementById('targetNetPnl').addEventListener('input', calcMarginFromTarget);
             document.getElementById('margin').addEventListener('input', onMarginManualInput);
 
@@ -1191,7 +1213,7 @@
             notesEl.addEventListener('blur', function() { if(!this.value.trim()) this.rows = 2; });
             notesEl.addEventListener('input', function() { this.rows = Math.max(6, this.value.split('\n').length); });
             notesEl.addEventListener('paste', async (e) => {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items; const files = [];
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items; const files =[];
                 for (let i in items) { if (items[i].kind === 'file' && items[i].type.startsWith('image/')) files.push(items[i].getAsFile()); }
                 if (files.length > 0) { e.preventDefault(); await processFiles(files); }
             });
@@ -1199,7 +1221,6 @@
             notesEl.addEventListener('dragleave', (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); });
             notesEl.addEventListener('drop', async (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); if (e.dataTransfer.files.length > 0) await processFiles(e.dataTransfer.files); });
 
-            // 核心防御：提交拦截
             document.getElementById('trade-form').addEventListener('submit', async function(e) {
                 e.preventDefault(); 
                 try {
@@ -1233,7 +1254,7 @@
                     }
 
                     const newTrade = {
-                        id: editingTradeId ? Number(editingTradeId) : Date.now(), // 极强安全转换
+                        id: editingTradeId ? Number(editingTradeId) : Date.now(), 
                         date: document.getElementById('date').value,
                         entryTime: document.getElementById('entryTime').value,
                         exitTime: document.getElementById('exitTime').value,
@@ -1263,7 +1284,6 @@
                         trades.unshift(newTrade);
                     }
 
-                    // 写入数据引擎
                     await StorageEngine.put(newTrade, trades);
                     
                     if (editingTradeId) {
@@ -1273,7 +1293,7 @@
                         document.getElementById('date').valueAsDate = new Date();
                         document.getElementById('exchange').value = exchange;
                         document.getElementById('strategy').value = inputStrategy;
-                        pendingImages = [];
+                        pendingImages =[];
                         renderImagePreviews();
                         document.getElementById('notes').rows = 2;
                         if (optionalFieldsOpen) toggleOptionalFields();
@@ -1295,14 +1315,9 @@
         }
 
         window.onload = async () => {
-            // 确保数据库优先加载
             await StorageEngine.init();
             trades = await StorageEngine.getAll();
-
-            // 绑定事件和安全拦截器
             try { attachEvents(); } catch(e) { console.error("Event Binding Error", e); }
-            
-            // 安全渲染 UI
             try {
                 document.getElementById('date').valueAsDate = new Date();
                 updateFormPresets();
@@ -1314,13 +1329,25 @@
             }
         };
 
-        // --- 11. 视图渲染核心 ---
         window.switchViewMode = function(mode) {
             currentViewMode = mode;
             document.getElementById('table-view').classList.toggle('hidden', mode !== 'table');
             document.getElementById('notes-view').classList.toggle('hidden', mode !== 'notes');
             
-            // 自动平滑滚动到复盘时间轴区域
+            const btnTable = document.getElementById('btn-view-table');
+            const btnNotes = document.getElementById('btn-view-notes');
+            
+            const activeClass = "px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm transition-all";
+            const inactiveClass = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+            
+            if (mode === 'table') {
+                btnTable.className = activeClass;
+                btnNotes.className = inactiveClass;
+            } else {
+                btnNotes.className = activeClass;
+                btnTable.className = inactiveClass;
+            }
+            
             if (mode === 'notes') {
                 setTimeout(() => {
                     document.getElementById('records-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1356,8 +1383,7 @@
             renderFilterSummary(filteredData);
         }
 
-        window.clearTableFilter = function() { 
-            ['table-start','table-end','filter-exchange','filter-ticker','filter-direction','filter-strategy','filter-pnlType'].forEach(id => document.getElementById(id).value = '');
+        window.clearTableFilter = function() {['table-start','table-end','filter-exchange','filter-ticker','filter-direction','filter-strategy','filter-pnlType'].forEach(id => document.getElementById(id).value = '');
             updateFilteredView(); 
         }
 
@@ -1405,7 +1431,7 @@
             if(!filterChartOpen) return;
             if (typeof Chart === 'undefined') return;
             const ctx = document.getElementById('filterPnlChart').getContext('2d');
-            const chrono = [...filteredData].reverse();
+            const chrono =[...filteredData].reverse();
             let rawLabels = ['起始'], cum = [0], cur = 0;
             chrono.forEach(t => { cur += t.netPnl; rawLabels.push(`${t.date.substring(5)}`); cum.push(cur); });
 
@@ -1415,12 +1441,32 @@
 
             if (filterPnlChartInstance) filterPnlChartInstance.destroy();
             filterPnlChartInstance = new Chart(ctx, {
-                type: 'line', data: { labels: rawLabels, datasets: [{ data: cum, fill: { target: 'origin', above: 'rgba(59, 130, 246, 0.1)', below: 'rgba(244, 63, 94, 0.1)' }, borderColor: function(c) { const a = c.chart.chartArea; if (!a) return '#3b82f6'; const z = c.chart.scales.y.getPixelForValue(0); const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); let p = Math.max(0, Math.min(1, (z - a.top) / (a.bottom - a.top))); g.addColorStop(0, '#3b82f6'); g.addColorStop(p, '#3b82f6'); g.addColorStop(p, '#f43f5e'); g.addColorStop(1, '#f43f5e'); return g; }, borderWidth: 2, pointRadius: 0, pointHoverRadius: 6, pointHitRadius: 15, tension: 0.4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v } }, x: { display: true, grid: { display: false }, ticks: { color: tickColor, maxTicksLimit: 15, autoSkip: true, maxRotation: 45, callback: function(v, i) { if (i === 0) return '起始'; const curL = rawLabels[i]; const nextL = i + 1 < rawLabels.length ? rawLabels[i + 1] : null; if (curL !== nextL) return curL; return null; } } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `筛选累计盈亏: $${c.parsed.y.toFixed(2)}` } } } }
+                type: 'line', data: { labels: rawLabels, datasets:[{ data: cum, fill: { target: 'origin', above: 'rgba(59, 130, 246, 0.1)', below: 'rgba(244, 63, 94, 0.1)' }, borderColor: function(c) { const a = c.chart.chartArea; if (!a) return '#3b82f6'; const z = c.chart.scales.y.getPixelForValue(0); const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); let p = Math.max(0, Math.min(1, (z - a.top) / (a.bottom - a.top))); g.addColorStop(0, '#3b82f6'); g.addColorStop(p, '#3b82f6'); g.addColorStop(p, '#f43f5e'); g.addColorStop(1, '#f43f5e'); return g; }, borderWidth: 2, pointRadius: 0, pointHoverRadius: 6, pointHitRadius: 15, tension: 0.4 }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    scales: { 
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v } }, 
+                        x: { 
+                            display: true, grid: { display: false }, 
+                            ticks: { 
+                                color: tickColor, 
+                                maxTicksLimit: 12, 
+                                autoSkip: true, 
+                                maxRotation: 45, 
+                                callback: function(value, index, values) { 
+                                    if (index === 0) return '起始';
+                                    const curLabel = this.getLabelForValue(value);
+                                    const prevLabel = index > 0 ? this.getLabelForValue(values[index-1].value) : null;
+                                    return curLabel === prevLabel ? null : curLabel; 
+                                } 
+                            } 
+                        } 
+                    }, 
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `筛选累计盈亏: $${c.parsed.y.toFixed(2)}` } } } 
+                }
             });
         }
 
-        // --- 表格视图渲染 ---
         function renderTable(filteredTrades) {
             const thead = document.getElementById('table-header');
             const tbody = document.getElementById('table-body');
@@ -1447,50 +1493,79 @@
             if (filteredTrades.length === 0) { 
                 const colSpan = 5 + Object.values(cols).filter(v=>v).length;
                 tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500">没有符合筛选条件的数据</td></tr>`; 
-                return; 
-            }
-            
-            filteredTrades.forEach(t => {
-                const cColor = t.netPnl > 0 ? 'text-emerald-500' : (t.netPnl < 0 ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400');
-                const dirBadge = t.direction === 'long' ? `<span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-xs">多</span>` : `<span class="px-2 py-0.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded text-xs">空</span>`;
-                
-                let pnlTypeBadge = '';
-                if(t.pnlType === 'TP') pnlTypeBadge = '<span class="text-emerald-500 font-medium text-xs">止盈</span>';
-                else if(t.pnlType === 'SL') pnlTypeBadge = '<span class="text-rose-500 font-medium text-xs">止损</span>';
-                else pnlTypeBadge = '<span class="text-gray-500 dark:text-gray-400 font-medium text-xs">保本</span>';
+            } else {
+                filteredTrades.forEach(t => {
+                    const cColor = t.netPnl > 0 ? 'text-emerald-500' : (t.netPnl < 0 ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400');
+                    const dirBadge = t.direction === 'long' ? `<span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-xs">多</span>` : `<span class="px-2 py-0.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded text-xs">空</span>`;
+                    
+                    let pnlTypeBadge = '';
+                    if(t.pnlType === 'TP') pnlTypeBadge = '<span class="text-emerald-500 font-medium text-xs">止盈</span>';
+                    else if(t.pnlType === 'SL') pnlTypeBadge = '<span class="text-rose-500 font-medium text-xs">止损</span>';
+                    else pnlTypeBadge = '<span class="text-gray-500 dark:text-gray-400 font-medium text-xs">保本</span>';
 
-                const imgCount = t.images ? t.images.length : 0;
-                const imgThumb = imgCount > 0 ? `<span class="inline-flex items-center text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[10px] mr-1 border border-blue-100 dark:border-blue-800" title="含 ${imgCount} 张图片"><i class="fa-solid fa-image mr-1"></i>${imgCount}</span>` : '';
+                    const imgCount = t.images ? t.images.length : 0;
+                    const imgThumb = imgCount > 0 ? `<span class="inline-flex items-center text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[10px] mr-1 border border-blue-100 dark:border-blue-800" title="含 ${imgCount} 张图片"><i class="fa-solid fa-image mr-1"></i>${imgCount}</span>` : '';
 
-                const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
-                
-                tr.innerHTML = `
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${t.date}</td>
-                    ${cols.exchange ? `<td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">${t.exchange || '-'}</td>` : ''}
-                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${t.ticker}</td>
-                    <td class="px-4 py-3">${dirBadge}</td>
-                    ${cols.strategy ? `<td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">${t.strategy || '-'}</td>` : ''}
-                    ${cols.tags ? `<td class="px-4 py-3"><span class="text-[10px] text-purple-500 block truncate max-w-[120px]">${t.tags ? `<i class="fa-solid fa-tags mr-1"></i>${t.tags}` : '-'}</span></td>` : ''}
-                    ${cols.margin ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300">${t.margin} / ${t.leverage}x</td>` : ''}
-                    ${cols.entryExit ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-xs">${t.actualEntry}<br/><span class="text-gray-400 dark:text-gray-500">${t.exitPrice}</span></td>` : ''}
-                    ${cols.fee ? `<td class="px-4 py-3 text-right text-xs"><span class="text-rose-400">-${t.fee.toFixed(2)}</span><br/><span class="text-emerald-400">+${t.rebate.toFixed(2)}</span></td>` : ''}
-                    ${cols.gross ? `<td class="px-4 py-3 text-right ${cColor}">${t.grossPnl > 0 ? '+' : ''}${t.grossPnl.toFixed(2)}</td>` : ''}
-                    <td class="px-4 py-3 text-right font-bold ${cColor}">${t.netPnl > 0 ? '+' : ''}${t.netPnl.toFixed(2)}</td>
-                    <td class="px-4 py-3 text-center">${pnlTypeBadge}</td>
-                    ${cols.duration ? `<td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">${calcDurationText(t.entryTime, t.exitTime)}</td>` : ''}
-                    <td class="px-4 py-3 text-right">
-                        <div class="flex items-center justify-end space-x-3">
-                            <div class="flex items-center cursor-pointer hover:text-blue-500 transition max-w-[120px]" onclick="openTradeDetail(${t.id})" title="点击查看详情">
-                                ${imgThumb}
-                                <span class="truncate text-xs text-gray-500 dark:text-gray-400">${t.notes}</span>
+                    const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
+                    
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${t.date}</td>
+                        ${cols.exchange ? `<td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">${t.exchange || '-'}</td>` : ''}
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${t.ticker}</td>
+                        <td class="px-4 py-3">${dirBadge}</td>
+                        ${cols.strategy ? `<td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">${t.strategy || '-'}</td>` : ''}
+                        ${cols.tags ? `<td class="px-4 py-3"><span class="text-[10px] text-purple-500 block truncate max-w-[120px]">${t.tags ? `<i class="fa-solid fa-tags mr-1"></i>${t.tags}` : '-'}</span></td>` : ''}
+                        ${cols.margin ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300">${t.margin} / ${t.leverage}x</td>` : ''}
+                        ${cols.entryExit ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-xs">${t.actualEntry}<br/><span class="text-gray-400 dark:text-gray-500">${t.exitPrice}</span></td>` : ''}
+                        ${cols.fee ? `<td class="px-4 py-3 text-right text-xs"><span class="text-rose-400">-${t.fee.toFixed(2)}</span><br/><span class="text-emerald-400">+${t.rebate.toFixed(2)}</span></td>` : ''}
+                        ${cols.gross ? `<td class="px-4 py-3 text-right ${cColor}">${t.grossPnl > 0 ? '+' : ''}${t.grossPnl.toFixed(2)}</td>` : ''}
+                        <td class="px-4 py-3 text-right font-bold ${cColor}">${t.netPnl > 0 ? '+' : ''}${t.netPnl.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-center">${pnlTypeBadge}</td>
+                        ${cols.duration ? `<td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">${calcDurationText(t.entryTime, t.exitTime)}</td>` : ''}
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end space-x-3">
+                                <div class="flex items-center cursor-pointer hover:text-blue-500 transition max-w-[120px]" onclick="openTradeDetail(${t.id})" title="点击查看详情">
+                                    ${imgThumb}
+                                    <span class="truncate text-xs text-gray-500 dark:text-gray-400">${t.notes}</span>
+                                </div>
+                                <button onclick="editTrade(${t.id})" class="text-emerald-500 hover:text-emerald-400 transition" title="编辑"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="openTradeDetail(${t.id})" class="text-blue-400 hover:text-blue-300 transition" title="详情"><i class="fa-solid fa-eye"></i></button>
+                                <button onclick="deleteTrade(${t.id})" class="text-gray-400 hover:text-rose-500 transition" title="删除"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
-                            <button onclick="editTrade(${t.id})" class="text-emerald-500 hover:text-emerald-400 transition" title="编辑"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="openTradeDetail(${t.id})" class="text-blue-400 hover:text-blue-300 transition" title="详情"><i class="fa-solid fa-eye"></i></button>
-                            <button onclick="deleteTrade(${t.id})" class="text-gray-400 hover:text-rose-500 transition" title="删除"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            const ths = thead.querySelectorAll('th');
+            ths.forEach(th => {
+                th.classList.add('resizable');
+                const resizer = document.createElement('div');
+                resizer.className = 'resizer';
+                th.appendChild(resizer);
+                
+                let startX, startWidth;
+                resizer.addEventListener('mousedown', function(e) {
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    resizer.classList.add('active');
+                    
+                    function onMouseMove(e) {
+                        const newWidth = startWidth + (e.pageX - startX);
+                        th.style.width = newWidth + 'px';
+                        th.style.minWidth = newWidth + 'px';
+                        th.style.maxWidth = newWidth + 'px';
+                    }
+                    function onMouseUp() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                        resizer.classList.remove('active');
+                    }
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
             });
         }
 
@@ -1552,6 +1627,261 @@
             html += '</div>';
             container.innerHTML = html;
         }
+
+        window.renderApp = function() {
+            renderDashboard();
+            updateFilteredView(); 
+            renderChart();
+            renderCalendar();
+        };
+
+        window.renderChart = function() {
+            if (typeof Chart === 'undefined') return;
+            const start = document.getElementById('chart-start').value;
+            const end = document.getElementById('chart-end').value;
+
+            let filtered = trades.filter(t => {
+                if (start && t.date < start) return false;
+                if (end && t.date > end) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id);
+
+            let labels = ['起始'];
+            let data =[0];
+            let cumulative = 0;
+
+            filtered.forEach(t => {
+                cumulative += t.netPnl;
+                labels.push(t.date.substring(5)); 
+                data.push(cumulative);
+            });
+
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#374151' : '#f1f5f9';
+            const tickColor = isDark ? '#9ca3af' : '#94a3b8';
+
+            if (window.pnlChartInstance) window.pnlChartInstance.destroy();
+
+            window.pnlChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets:[{
+                        label: '累计盈亏',
+                        data: data,
+                        borderColor: function(c) {
+                            const a = c.chart.chartArea; 
+                            if (!a) return '#3b82f6'; 
+                            const z = c.chart.scales.y.getPixelForValue(0); 
+                            const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom); 
+                            let p = Math.max(0, Math.min(1, (z - a.top) / (a.bottom - a.top))); 
+                            g.addColorStop(0, '#10b981'); 
+                            g.addColorStop(p, '#10b981'); 
+                            g.addColorStop(p, '#f43f5e'); 
+                            g.addColorStop(1, '#f43f5e'); 
+                            return g;
+                        },
+                        fill: { target: 'origin', above: 'rgba(16, 185, 129, 0.1)', below: 'rgba(244, 63, 94, 0.1)' },
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHitRadius: 15,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v } },
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                color: tickColor, 
+                                maxTicksLimit: 12, 
+                                autoSkip: true,
+                                maxRotation: 45,
+                                callback: function(value, index, values) { 
+                                    if (index === 0) return '起始';
+                                    const curLabel = this.getLabelForValue(value);
+                                    const prevLabel = index > 0 ? this.getLabelForValue(values[index-1].value) : null;
+                                    return curLabel === prevLabel ? null : curLabel; 
+                                }
+                            } 
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: c => `累计盈亏: $${c.parsed.y.toFixed(2)}` } }
+                    }
+                }
+            });
+        };
+
+        window.clearChartFilter = function() {
+            document.getElementById('chart-start').value = '';
+            document.getElementById('chart-end').value = '';
+            renderChart();
+        };
+
+        function formatCalNumber(num) {
+            if (num === 0) return "0";
+            let s = num.toFixed(2);
+            if (s.length <= 6) return s; 
+            s = num.toFixed(1);
+            if (s.length <= 6) return s; 
+            s = num.toFixed(0);
+            if (s.length <= 6) return s; 
+            return (num / 1000).toFixed(1) + 'k';
+        }
+
+        window.renderCalendar = function() {
+            const year = currentCalDate.getFullYear();
+            const month = currentCalDate.getMonth();
+            document.getElementById('calendar-month-year').innerText = `${year}年${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="aspect-square rounded-lg bg-transparent"></div>`;
+            }
+
+            const dailyPnl = {};
+            trades.forEach(t => {
+                if (!dailyPnl[t.date]) dailyPnl[t.date] = { sum: 0, count: 0 };
+                dailyPnl[t.date].sum += t.netPnl;
+                dailyPnl[t.date].count += 1;
+            });
+
+            const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const data = dailyPnl[dateStr];
+                
+                let bgClass = 'bg-gray-50 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300';
+                let borderClass = dateStr === todayStr ? 'border-2 border-blue-500' : 'border border-gray-100 dark:border-gray-700';
+                let innerHtml = `<span class="text-sm font-medium opacity-50">${d}</span>`;
+
+                if (data) {
+                    if (data.sum > 0) bgClass = 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-800/70 shadow-sm';
+                    else if (data.sum < 0) bgClass = 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-400 cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-800/70 shadow-sm';
+                    else bgClass = 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-300 shadow-sm';
+                    
+                    let displayPnl = formatCalNumber(Math.abs(data.sum));
+                    
+                    innerHtml = `
+                        <div class="flex flex-col items-center justify-center h-full w-full" onclick="openDayRecordsModal('${dateStr}')">
+                            <span class="text-xs font-bold">${d}</span>
+                            <span class="text-[9px] font-bold mt-0.5" title="当日净盈亏">$${displayPnl}</span>
+                            <span class="absolute top-0.5 right-1 text-[8px] opacity-60" title="交易笔数">${data.count}笔</span>
+                        </div>
+                    `;
+                }
+
+                grid.innerHTML += `<div class="aspect-square rounded-lg flex items-center justify-center relative transition-colors ${bgClass} ${borderClass}">${innerHtml}</div>`;
+            }
+        };
+
+        window.changeMonth = function(offset) {
+            currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+            renderCalendar();
+        };
+
+        window.openDayRecordsModal = function(dateStr) {
+            document.getElementById('day-modal-title').innerText = `${dateStr} 当日记录`;
+            const dayTrades = trades.filter(t => t.date === dateStr).sort((a,b) => b.id - a.id);
+            const tbody = document.getElementById('day-records-body');
+            tbody.innerHTML = '';
+            
+            dayTrades.forEach(t => {
+                const cColor = t.netPnl > 0 ? 'text-emerald-500' : (t.netPnl < 0 ? 'text-rose-500' : 'text-gray-500');
+                const dirBadge = t.direction === 'long' ? '<span class="text-emerald-500 font-medium">多</span>' : '<span class="text-rose-500 font-medium">空</span>';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0" onclick="openTradeDetail(${t.id}); closeDayRecordsModal();">
+                        <td class="px-4 py-3 text-gray-900 dark:text-gray-100"><span class="text-[10px] text-gray-500 dark:text-gray-400 block">${t.exchange || '-'}</span>${t.ticker}</td>
+                        <td class="px-4 py-3">${dirBadge}</td>
+                        <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-xs">${t.margin} / <span class="text-gray-400">${t.leverage}x</span></td>
+                        <td class="px-4 py-3 text-right text-xs ${t.grossPnl > 0 ? 'text-emerald-500' : (t.grossPnl < 0 ? 'text-rose-500' : '')}">${t.grossPnl > 0 ? '+' : ''}${t.grossPnl.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-right font-bold ${cColor}">${t.netPnl > 0 ? '+' : ''}${t.netPnl.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-center text-xs text-gray-500">${t.pnlType}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('day-records-modal').classList.remove('hidden');
+            document.getElementById('day-records-modal').classList.add('flex');
+        };
+
+        window.closeDayRecordsModal = function() {
+            document.getElementById('day-records-modal').classList.add('hidden');
+            document.getElementById('day-records-modal').classList.remove('flex');
+        };
+
+        window.openTradeDetail = function(id) {
+            const t = trades.find(item => item.id === Number(id));
+            if (!t) return;
+            
+            document.getElementById('dt-date').innerText = t.date;
+            document.getElementById('dt-entry-time').innerText = t.entryTime ? t.entryTime.replace('T', ' ') : '-';
+            
+            let exitTimeStr = '-';
+            if (t.exitTime) {
+                const duration = calcDurationText(t.entryTime, t.exitTime);
+                exitTimeStr = `${t.exitTime.replace('T', ' ')} (${duration})`;
+            }
+            document.getElementById('dt-exit-time').innerText = exitTimeStr;
+            
+            document.getElementById('dt-ticker').innerText = `${t.exchange || '-'} / ${t.ticker}`;
+            document.getElementById('dt-direction').innerHTML = t.direction === 'long' ? '<span class="text-emerald-500 font-bold">做多 (Long)</span>' : '<span class="text-rose-500 font-bold">做空 (Short)</span>';
+            document.getElementById('dt-strategy').innerHTML = `${t.strategy || '-'}${t.tags ? ` <span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 px-1.5 py-0.5 rounded ml-2"><i class="fa-solid fa-tags mr-1"></i>${t.tags}</span>` : ''}`;
+            
+            let pnlBadge = t.pnlType === 'TP' ? '<span class="text-emerald-500 font-bold">止盈 (Take Profit)</span>' : (t.pnlType === 'SL' ? '<span class="text-rose-500 font-bold">止损 (Stop Loss)</span>' : '<span class="text-gray-500 font-bold">保本 (Breakeven)</span>');
+            document.getElementById('dt-pnltype').innerHTML = pnlBadge;
+            
+            document.getElementById('dt-margin-lev').innerText = `$${t.margin} (${t.leverage}x)`;
+            document.getElementById('dt-fee').innerText = `手续费: $${t.fee.toFixed(2)} / 返佣: $${t.rebate.toFixed(2)}`;
+            document.getElementById('dt-prices').innerHTML = `<span class="text-blue-500">进: ${t.actualEntry}</span> / <span class="text-orange-500">出: ${t.exitPrice}</span>`;
+            document.getElementById('dt-funding').innerText = `$${t.fundingFee || 0}`;
+            
+            document.getElementById('dt-gross').innerText = `${t.grossPnl > 0 ? '+' : ''}$${t.grossPnl.toFixed(2)}`;
+            document.getElementById('dt-gross').className = t.grossPnl > 0 ? 'font-bold text-emerald-500' : (t.grossPnl < 0 ? 'font-bold text-rose-500' : 'font-bold text-gray-500');
+            
+            document.getElementById('dt-net').innerText = `${t.netPnl > 0 ? '+' : ''}$${t.netPnl.toFixed(2)}`;
+            document.getElementById('dt-net').className = `font-bold text-2xl ${t.netPnl > 0 ? 'text-emerald-500' : (t.netPnl < 0 ? 'text-rose-500' : 'text-gray-500')}`;
+            
+            document.getElementById('dt-notes').innerText = (t.notes && t.notes !== '-') ? t.notes : '未填写任何交易想法或复盘笔记...';
+            
+            const imgContainer = document.getElementById('dt-image-container-detail');
+            const imgSection = document.getElementById('dt-image-section');
+            imgContainer.innerHTML = '';
+            
+            if (t.images && t.images.length > 0) {
+                imgSection.classList.remove('hidden');
+                t.images.forEach(src => {
+                    imgContainer.innerHTML += `<img src="${src}" class="w-full h-24 sm:h-32 object-cover rounded-lg border dark:border-gray-700 cursor-zoom-in hover:opacity-80 transition shadow-sm" onclick="viewImageFromUrl('${src}')">`;
+                });
+            } else {
+                imgSection.classList.add('hidden');
+            }
+            
+            document.getElementById('trade-detail-modal').classList.remove('hidden');
+            document.getElementById('trade-detail-modal').classList.add('flex');
+        };
+
+        window.closeTradeDetail = function() {
+            document.getElementById('trade-detail-modal').classList.add('hidden');
+            document.getElementById('trade-detail-modal').classList.remove('flex');
+        };
+
     </script>
 </body>
 </html>
