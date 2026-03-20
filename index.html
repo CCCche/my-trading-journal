@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>量化交易日志追踪系统 v19.0</title>
+    <title>量化交易日志追踪系统 v22.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -41,7 +41,7 @@
         
         <header class="flex flex-wrap items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 gap-4">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-blue-500 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded ml-2">V19 稳定版</span>
+                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-blue-500 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded ml-2">V22 完美重构版</span>
             </h1>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="toggleDarkMode()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
@@ -51,10 +51,10 @@
                 <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                 <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
                 <button onclick="document.getElementById('import-file').click()" class="text-sm px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
-                    <i class="fa-solid fa-file-import mr-1 text-gray-500 dark:text-gray-400"></i>导入
+                    <i class="fa-solid fa-file-import mr-1 text-gray-500 dark:text-gray-400"></i>导入历史
                 </button>
                 <button onclick="exportData()" class="text-sm px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
-                    <i class="fa-solid fa-file-export mr-1 text-gray-500 dark:text-gray-400"></i>导出
+                    <i class="fa-solid fa-file-export mr-1 text-gray-500 dark:text-gray-400"></i>安全导出
                 </button>
                 <button onclick="openSettings()" class="text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors ml-2">
                     <i class="fa-solid fa-gear mr-1"></i>全局设置
@@ -70,8 +70,12 @@
                 <span class="text-sm font-bold text-gray-600 dark:text-gray-300"><i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>全局量化核心指标</span>
                 <i class="fa-solid fa-chevron-up text-gray-400 transition-transform duration-300" id="dash-collapse-icon"></i>
             </div>
-            <div id="dashboard-container" class="p-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                </div>
+            <div class="p-5 flex flex-col gap-4">
+                <div id="dash-main-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    </div>
+                <div id="dash-advanced-row" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    </div>
+            </div>
         </section>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -85,7 +89,7 @@
                         <button onclick="clearChartFilter()" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
                 </div>
-                <div class="w-full flex-1 min-h-[250px] relative">
+                <div class="w-full flex-1 min-h-[250px] relative" id="chart-wrapper">
                     <canvas id="pnlChart"></canvas>
                 </div>
             </section>
@@ -108,91 +112,100 @@
 
         <section class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-300" id="form-section">
             <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white" id="form-title"><i class="fa-solid fa-pen-to-square mr-2 text-emerald-500"></i>录入新交易</h2>
-            <form id="trade-form" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
+            <form id="trade-form" class="flex flex-col gap-4">
                 
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">交易归属日期</label>
-                    <input type="date" id="date" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">交易归属日期 <span class="text-rose-500">*</span></label>
+                        <input type="date" id="date" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">交易所</label>
+                        <select id="exchange" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-blue-600 dark:text-blue-400 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"></select>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">标的 <span class="text-[10px] text-blue-400 ml-1 font-normal">(Tab自动补全)</span> <span class="text-rose-500">*</span></label>
+                        <input type="text" id="ticker" list="ticker-list" required placeholder="BTC/USDT" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm uppercase transition-colors">
+                        <datalist id="ticker-list"></datalist>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">策略类型</label>
+                        <select id="strategy" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"></select>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">方向</label>
+                        <select id="direction" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium transition-colors">
+                            <option value="long" class="text-emerald-600 dark:text-emerald-400">做多 (Long)</option>
+                            <option value="short" class="text-rose-600 dark:text-rose-400">做空 (Short)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">杠杆倍数 (x) <span class="text-rose-500">*</span></label>
+                        <input type="number" id="leverage" step="any" required placeholder="10" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">实际进入点位 <span class="text-rose-500">*</span></label>
+                        <input type="number" id="actualEntry" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">出场点位 <span class="text-rose-500">*</span></label>
+                        <input type="number" id="exitPrice" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">投入保证金 (USDT) <span class="text-rose-500">*</span></label>
+                        <input type="number" id="margin" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">盈损分类 <span class="text-[10px] text-blue-400 ml-1 font-normal">(自动推算)</span></label>
+                        <select id="pnlType" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                            <option value="TP">止盈 (Take Profit)</option>
+                            <option value="SL">止损 (Stop Loss)</option>
+                            <option value="BE">保本 (Breakeven)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">资金费 (支出正数, 收入负数) <span class="text-rose-500">*</span></label>
+                        <input type="number" id="fundingFee" step="any" value="0" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
                 </div>
 
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">交易所</label>
-                    <select id="exchange" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-blue-600 dark:text-blue-400 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"></select>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">标的 <span class="text-[10px] text-blue-400 ml-1 font-normal">(Tab自动补全)</span></label>
-                    <input type="text" id="ticker" list="ticker-list" required placeholder="BTC/USDT" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm uppercase transition-colors">
-                    <datalist id="ticker-list"></datalist>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">策略类型</label>
-                    <select id="strategy" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors"></select>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">方向</label>
-                    <select id="direction" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium transition-colors">
-                        <option value="long" class="text-emerald-600 dark:text-emerald-400">做多 (Long)</option>
-                        <option value="short" class="text-rose-600 dark:text-rose-400">做空 (Short)</option>
-                    </select>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">杠杆倍数 (x)</label>
-                    <input type="number" id="leverage" step="any" required placeholder="10" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">实际进入点位</label>
-                    <input type="number" id="actualEntry" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">出场点位</label>
-                    <input type="number" id="exitPrice" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" onclick="toggleOptionalFields()" class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center font-medium transition-colors">
+                        <i class="fa-solid fa-chevron-down mr-2" id="icon-optional"></i><span id="text-optional">展开高级选项 (目标净利润/进出场时间/情绪标签)</span>
+                    </button>
                 </div>
 
-                <div class="flex flex-col relative group">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">目标净利润 <span class="text-[10px] text-orange-500 dark:text-orange-400 ml-1 font-normal">(支持负数)</span></label>
-                    <input type="number" id="targetNetPnl" step="any" placeholder="填此项可自动推算" class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm transition-colors bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-gray-800 dark:text-gray-200">
+                <div id="optional-fields-container" class="hidden grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
+                    <div class="flex flex-col relative group">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">目标净利润 <span class="text-[10px] text-orange-500 dark:text-orange-400 ml-1 font-normal">(支持负数)</span></label>
+                        <input type="number" id="targetNetPnl" step="any" placeholder="填此可反算保证金" class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm transition-colors bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">进场时间</label>
+                        <input type="datetime-local" id="entryTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">出场时间</label>
+                        <input type="datetime-local" id="exitTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">标签与情绪 <span class="text-[10px] text-gray-400 ml-1 font-normal">(Tab自动补全)</span></label>
+                        <input type="text" id="tags" list="tags-list" placeholder="如: FOMO, 右侧突破" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-purple-600 dark:text-purple-400 transition-colors">
+                        <datalist id="tags-list"></datalist>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">投入保证金 (USDT)</label>
-                    <input type="number" id="margin" step="any" required placeholder="0.00" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">盈损分类</label>
-                    <select id="pnlType" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                        <option value="TP">止盈 (Take Profit)</option>
-                        <option value="SL">止损 (Stop Loss)</option>
-                        <option value="BE">保本 (Breakeven)</option>
-                    </select>
-                </div>
-                
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">资金费 (支出正数, 收入负数)</label>
-                    <input type="number" id="fundingFee" step="any" value="0" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">进场时间 <span class="text-[10px] text-gray-400 ml-1 font-normal">(选填)</span></label>
-                    <input type="datetime-local" id="entryTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">出场时间 <span class="text-[10px] text-gray-400 ml-1 font-normal">(选填)</span></label>
-                    <input type="datetime-local" id="exitTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
-                </div>
-                <div class="md:col-span-2 lg:col-span-2 flex flex-col">
-                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">标签与情绪 <span class="text-[10px] text-gray-400 ml-1 font-normal">(选填，Tab自动补全)</span></label>
-                    <input type="text" id="tags" list="tags-list" placeholder="例如: FOMO, 右侧突破, 疲劳交易" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-purple-600 dark:text-purple-400 transition-colors">
-                    <datalist id="tags-list"></datalist>
-                </div>
-                
-                <div class="md:col-span-3 lg:col-span-4 flex flex-col">
+                <div class="flex flex-col mt-2">
                     <div class="flex justify-between items-end mb-1">
                         <label class="text-xs text-gray-500 dark:text-gray-400">交易想法 / 复盘笔记</label>
                         <div class="flex items-center">
@@ -203,11 +216,10 @@
                         </div>
                     </div>
                     <textarea id="notes" rows="2" placeholder="这笔交易的逻辑是... (支持直接复制 Ctrl+V 粘贴图片，或拖拽图片到此框中)" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none transition-all"></textarea>
-                    
                     <div id="image-preview-container" class="hidden mt-3 flex flex-wrap gap-3"></div>
                 </div>
 
-                <div class="md:col-span-3 lg:col-span-4 flex justify-between items-center mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <div class="flex justify-between items-center mt-2 pt-4 border-t border-gray-100 dark:border-gray-800">
                     <div class="text-xs text-gray-500 dark:text-gray-400 flex-1 mr-4 hidden sm:block" id="status-indicator">
                         <i class="fa-solid fa-spinner fa-spin text-blue-400 mr-1"></i>正在初始化双核存储引擎...
                     </div>
@@ -223,7 +235,7 @@
             </form>
         </section>
 
-        <section class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm">
+        <section class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm" id="records-section">
             <div class="px-6 py-4 bg-gray-50/50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
                     <div class="flex items-center gap-4">
@@ -254,13 +266,16 @@
             </div>
 
             <div id="filter-section-wrapper" class="hidden flex-col border-b border-blue-100 dark:border-blue-900">
-                <div class="px-6 py-2.5 bg-blue-50/80 dark:bg-blue-900/20 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                    <div class="flex items-center"><i class="fa-solid fa-chart-pie text-blue-400 mr-2"></i><span class="text-gray-500 dark:text-gray-400 mr-1">筛选笔数:</span><span id="fs-count" class="font-bold text-gray-900 dark:text-gray-100">0</span></div>
-                    <div class="flex items-center"><i class="fa-solid fa-percent text-purple-400 mr-2"></i><span class="text-gray-500 dark:text-gray-400 mr-1">胜率:</span><span id="fs-winrate" class="font-bold text-gray-900 dark:text-gray-100">0.00%</span></div>
-                    <div class="flex items-center"><i class="fa-solid fa-scale-balanced text-orange-400 mr-2"></i><span class="text-gray-500 dark:text-gray-400 mr-1">盈亏比:</span><span id="fs-wlratio" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i><span class="text-gray-500 dark:text-gray-400 mr-1">盈利因子:</span><span id="fs-profit-factor" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
-                    <div class="flex items-center"><i class="fa-solid fa-wallet text-emerald-400 mr-2"></i><span class="text-gray-500 dark:text-gray-400 mr-1">净利润:</span><span id="fs-pnl" class="font-bold">0.00</span></div>
-                    <div class="ml-auto">
+                <div class="px-6 py-3 bg-blue-50/80 dark:bg-blue-900/20 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">筛选笔数:</span><span id="fs-count" class="font-bold text-gray-900 dark:text-gray-100">0</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">胜率:</span><span id="fs-winrate" class="font-bold text-gray-900 dark:text-gray-100">0.00%</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">盈亏比:</span><span id="fs-wlratio" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">盈利因子:</span><span id="fs-profit-factor" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">最大回撤:</span><span id="fs-maxdrawdown" class="font-bold text-rose-500">0.00</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">夏普:</span><span id="fs-sharpe" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><span class="text-gray-500 dark:text-gray-400 mr-1">期望:</span><span id="fs-expectancy" class="font-bold text-gray-900 dark:text-gray-100">0.00</span></div>
+                    <div class="flex items-center"><i class="fa-solid fa-wallet text-emerald-400 mr-1"></i><span class="text-gray-500 dark:text-gray-400 mr-1">净利润:</span><span id="fs-pnl" class="font-bold">0.00</span></div>
+                    <div class="ml-auto w-full sm:w-auto mt-2 sm:mt-0 flex justify-end">
                         <button onclick="toggleFilterChart()" id="btn-toggle-fchart" class="text-xs px-3 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-50 dark:hover:bg-gray-700 transition flex items-center shadow-sm">
                             <i class="fa-solid fa-chevron-down mr-1" id="icon-toggle-fchart"></i>展开筛选曲线
                         </button>
@@ -367,15 +382,13 @@
             </div>
             <div class="p-6 space-y-6">
                 <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <label class="block text-sm text-gray-800 dark:text-gray-200 mb-3 font-bold"><i class="fa-solid fa-desktop mr-2 text-blue-500"></i>主面板指标展示配置</label>
+                    <label class="block text-sm text-gray-800 dark:text-gray-200 mb-3 font-bold"><i class="fa-solid fa-desktop mr-2 text-blue-500"></i>主面板高级指标展示配置</label>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                        <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-winrate" class="rounded text-blue-600 focus:ring-blue-500" checked disabled> <span class="text-gray-600 dark:text-gray-300">胜率 (强制)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-wlratio" class="rounded text-blue-600 focus:ring-blue-500" checked disabled> <span class="text-gray-600 dark:text-gray-300">盈亏比 (强制)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-profitfactor" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">盈利因子</span></label>
                         <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-maxdrawdown" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">最大回撤</span></label>
                         <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-sharpe" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">夏普比率</span></label>
                         <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-expectancy" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">单笔期望值</span></label>
                         <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-streaks" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">极值连胜/连亏</span></label>
+                        <div class="col-span-full text-xs text-gray-400 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>注意：总笔数、胜率、盈亏比、盈利因子、总盈亏为第一行主力指标，永远显示。</div>
                     </div>
                 </div>
 
@@ -422,6 +435,71 @@
     </div>
 
     <script>
+        // 将顶层所需的操作函数全部显式绑定到 window 上，防止被作用域隔离
+        window.exportData = function() {
+            if(trades.length === 0) { alert("当前没有可导出的数据！"); return; }
+            const dataStr = JSON.stringify(trades, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); 
+            a.href = url;
+            a.download = `交易记录_${new Date().toISOString().slice(0,10)}.json`;
+            // 必须 appendChild 才能在所有高安全性浏览器(如Firefox/Edge)中安全触发下载
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.deleteTrade = async function(id) {
+            if(confirm('确定删除此记录吗？')) { 
+                id = Number(id); // 强制转为数字，绝不报错
+                trades = trades.filter(t => t.id !== id); 
+                await StorageEngine.delete(id, trades); 
+                renderApp(); 
+            }
+        };
+
+        window.clearAllData = async function() {
+            if(confirm('警告：清空不可恢复！确认吗？')) { 
+                trades = []; 
+                await StorageEngine.clear(); 
+                renderApp(); 
+            }
+        };
+
+        window.importData = async function(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedRaw = safeJSONParse(e.target.result);
+                    if (Array.isArray(importedRaw)) {
+                        const imported = migrateLegacyData(importedRaw);
+                        if(confirm(`成功读取并修复 ${imported.length} 条数据。\n点击“确定”覆盖当前全部数据，点击“取消”则将导入数据与当前数据合并。`)) { 
+                            await StorageEngine.clear();
+                            await StorageEngine.putAll(imported);
+                            trades = imported; 
+                        } else {
+                            const uniqueIds = new Set();
+                            let merged = [...imported, ...trades].filter(t => { 
+                                if (uniqueIds.has(t.id)) return false; 
+                                uniqueIds.add(t.id); return true; 
+                            });
+                            merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+                            await StorageEngine.clear();
+                            await StorageEngine.putAll(merged);
+                            trades = merged;
+                        }
+                        renderApp();
+                        alert('历史破损文件导入及补全成功！');
+                    } else { alert('文件格式错误：需要为数组结构。'); }
+                } catch (err) { alert('文件解析失败，文件严重损坏，抢救算法无法恢复。\n详细错误:' + err.message); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        };
+
         // --- 1. 暗黑模式与系统色彩控制 ---
         function applyTheme(theme) {
             if (theme === 'dark') {
@@ -436,21 +514,22 @@
             const isDark = document.documentElement.classList.toggle('dark');
             const theme = isDark ? 'dark' : 'light';
             document.documentElement.style.colorScheme = theme;
-            localStorage.setItem('theme', theme);
+            try { localStorage.setItem('theme', theme); } catch(e){}
             if(window.pnlChartInstance) renderChart(); 
             if(window.filterPnlChartInstance) toggleFilterChart(true);
         }
         (function initTheme() {
-            const savedTheme = localStorage.getItem('theme');
+            let savedTheme = null;
+            try { savedTheme = localStorage.getItem('theme'); } catch(e){}
             if (savedTheme) applyTheme(savedTheme);
             else if (window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
         })();
 
-        // --- 2. 智能双核存储引擎 (容错机制) ---
-        const DB_NAME = 'QuantJournalDB_v19';
+        // --- 2. 智能双核存储引擎 (深度隔离报错) ---
+        const DB_NAME = 'QuantJournalDB_v22';
         const STORE_NAME = 'trades';
-        const STORAGE_KEY = 'crypto_trading_journal_v19_fallback';
-        const SETTINGS_KEY = 'crypto_settings_v19';
+        const STORAGE_KEY = 'crypto_trading_journal_v22_fallback';
+        const SETTINGS_KEY = 'crypto_settings_v22';
 
         const StorageEngine = {
             useIDB: false,
@@ -458,7 +537,7 @@
             init: function() {
                 return new Promise((resolve) => {
                     try {
-                        const req = indexedDB.open(DB_NAME, 1);
+                        const req = window.indexedDB.open(DB_NAME, 1);
                         req.onupgradeneeded = e => {
                             const db = e.target.result;
                             if(!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -466,18 +545,15 @@
                         req.onsuccess = e => { 
                             this.db = e.target.result; 
                             this.useIDB = true; 
-                            document.getElementById('status-indicator').innerHTML = '<i class="fa-solid fa-database text-blue-400 mr-1"></i>已启用高性能 IndexedDB，支持海量复盘数据。';
                             resolve(); 
                         };
                         req.onerror = e => {
-                            console.warn("IndexedDB 不可用，已降级为 LocalStorage");
+                            console.warn("IndexedDB 被浏览器拦截，降级为基础存储");
                             this.useIDB = false;
-                            document.getElementById('status-indicator').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-1"></i>当前环境禁用数据库，已降级为基础存储，请注意图片容量限制。';
                             resolve();
                         };
                     } catch(e) {
                         this.useIDB = false;
-                        document.getElementById('status-indicator').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-1"></i>数据库初始化异常，已降级为基础存储。';
                         resolve();
                     }
                 });
@@ -505,8 +581,7 @@
                 try {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataArray));
                 } catch(e) {
-                    alert('保存失败！本地存储空间已满（限制5MB）。\n建议：清理历史记录，减少图片，或使用无痕模式以外的环境。');
-                    throw e;
+                    throw new Error("由于当前是本地运行 (file:///)，浏览器底层数据库连接异常断开！\n\n同时，备用存储空间也已满 (超过5MB限制)。\n\n解决办法：\n1. 将此文件部署到 GitHub Pages (强烈推荐)\n2. 减少上传的高清图片数量");
                 }
             },
             put: function(trade, allTradesMemory) {
@@ -519,8 +594,14 @@
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).put(trade);
                         tx.oncomplete = () => resolve();
-                        tx.onerror = (e) => { this.useIDB = false; this.saveAllToFallback(allTradesMemory); resolve(); };
-                    } catch(e) { this.useIDB = false; try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); } }
+                        tx.onerror = () => { 
+                            this.useIDB = false; 
+                            try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); }
+                        };
+                    } catch(e) { 
+                        this.useIDB = false; 
+                        try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); } 
+                    }
                 });
             },
             putAll: function(dataArray) {
@@ -534,8 +615,14 @@
                         const store = tx.objectStore(STORE_NAME);
                         dataArray.forEach(t => store.put(t));
                         tx.oncomplete = () => resolve();
-                        tx.onerror = (e) => reject(e.target.error);
-                    } catch(e) { reject(e); }
+                        tx.onerror = () => {
+                            this.useIDB = false;
+                            try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); }
+                        };
+                    } catch(e) { 
+                        this.useIDB = false;
+                        try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); }
+                    }
                 });
             },
             delete: function(id, allTradesMemory) {
@@ -545,13 +632,21 @@
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).delete(id);
                         tx.oncomplete = () => resolve();
-                        tx.onerror = () => resolve();
-                    } catch(e) { resolve(); }
+                        tx.onerror = () => {
+                            this.useIDB = false;
+                            try { this.saveAllToFallback(allTradesMemory); } catch(e){}
+                            resolve();
+                        };
+                    } catch(e) { 
+                        this.useIDB = false;
+                        try { this.saveAllToFallback(allTradesMemory); } catch(e){}
+                        resolve(); 
+                    }
                 });
             },
             clear: function() {
                 return new Promise((resolve) => {
-                    localStorage.removeItem(STORAGE_KEY);
+                    try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
                     if (!this.useIDB || !this.db) { resolve(); return; }
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
@@ -563,10 +658,11 @@
             }
         };
 
-        // --- 3. 配置与全局状态 ---
-        let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+        // --- 3. 配置全局状态 (含防爆机制) ---
+        let settings = {};
+        try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) { console.warn("LocalStorage 禁止访问"); }
         
-        settings.dashboard = settings.dashboard || { profitFactor: true, maxDrawdown: true, sharpe: true, expectancy: true, streaks: true };
+        settings.dashboard = settings.dashboard || { maxDrawdown: true, sharpe: true, expectancy: true, streaks: true };
         settings.tableCols = settings.tableCols || { exchange: true, strategy: true, tags: true, margin: true, entryExit: true, fee: true, gross: true, duration: true };
         if (!settings.exchanges) {
             settings.exchanges = `Binance | 0.04 | 20\nOKX | 0.05 | 0\nBybit | 0.055 | 0`;
@@ -615,7 +711,10 @@
                 t.exitPrice = parseFloat(t.exitPrice) || 0; t.fee = parseFloat(t.fee) || 0; t.rebate = parseFloat(t.rebate) || 0;
                 t.fundingFee = parseFloat(t.fundingFee) || 0; t.grossPnl = parseFloat(t.grossPnl) || 0; t.netPnl = parseFloat(t.netPnl) || 0;
                 
-                if (!t.id) t.id = Date.now() + Math.floor(Math.random()*1000);
+                // 确保有绝对安全的数字 ID
+                if (!t.id || isNaN(Number(t.id))) t.id = Date.now() + Math.floor(Math.random()*1000);
+                else t.id = Number(t.id);
+
                 return t;
             });
         }
@@ -705,53 +804,75 @@
 
         // --- 6. 渲染层 (动态看板与折叠) ---
         let dashboardCollapsed = false;
-        function toggleDashboardCollapse() {
+        window.toggleDashboardCollapse = function() {
             dashboardCollapsed = !dashboardCollapsed;
-            const container = document.getElementById('dashboard-container');
+            const advContainer = document.getElementById('dash-advanced-row');
             const icon = document.getElementById('dash-collapse-icon');
             if(dashboardCollapsed) {
-                container.classList.add('hidden');
+                advContainer.classList.add('hidden');
                 icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
             } else {
-                container.classList.remove('hidden');
+                advContainer.classList.remove('hidden');
                 icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
             }
         }
 
         function renderDashboard() {
             const stats = calculateAdvancedStats(trades);
-            const c = document.getElementById('dashboard-container');
-            let html = `
-                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            const mainRow = document.getElementById('dash-main-row');
+            const advRow = document.getElementById('dash-advanced-row');
+
+            // 核心第一行始终显示
+            let mainHtml = `
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between shadow-sm hover:shadow-md transition">
                     <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">历史总笔数</p><p class="text-xl font-bold dark:text-white">${stats.total}</p></div>
                     <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-500"><i class="fa-solid fa-hashtag"></i></div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between shadow-sm hover:shadow-md transition">
                     <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">全局总胜率</p><p class="text-xl font-bold dark:text-white">${stats.winRate}</p></div>
                     <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-500"><i class="fa-solid fa-percent"></i></div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between shadow-sm hover:shadow-md transition">
                     <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">盈亏比 (均盈/亏)</p><p class="text-xl font-bold dark:text-white">${stats.wlRatio}</p></div>
                     <div class="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-orange-500"><i class="fa-solid fa-scale-balanced"></i></div>
                 </div>
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between shadow-sm hover:shadow-md transition">
+                    <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">盈利因子</p><p class="text-xl font-bold dark:text-white">${stats.profitFactor}</p></div>
+                    <div class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center text-yellow-500"><i class="fa-solid fa-bolt"></i></div>
+                </div>
             `;
-            
-            if(settings.dashboard.profitFactor) html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">盈利因子</p><p class="text-xl font-bold dark:text-white">${stats.profitFactor}</p></div><div class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center text-yellow-500"><i class="fa-solid fa-bolt"></i></div></div>`;
-            if(settings.dashboard.maxDrawdown) html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大回撤</p><p class="text-xl font-bold text-rose-500">-$${stats.maxDrawdown}</p></div><div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-500"><i class="fa-solid fa-water"></i></div></div>`;
-            if(settings.dashboard.sharpe) html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">夏普比率</p><p class="text-xl font-bold dark:text-white">${stats.sharpe}</p></div><div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500"><i class="fa-solid fa-chart-simple"></i></div></div>`;
-            if(settings.dashboard.expectancy) html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">单笔期望</p><p class="text-xl font-bold dark:text-white">$${stats.expectancy}</p></div><div class="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-500"><i class="fa-solid fa-bullseye"></i></div></div>`;
-            if(settings.dashboard.streaks) html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">极值(连胜/连亏)</p><p class="text-xl font-bold dark:text-white"><span class="text-emerald-500">${stats.maxWinStreak}</span> / <span class="text-rose-500">${stats.maxLossStreak}</span></p></div><div class="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center text-pink-500"><i class="fa-solid fa-fire"></i></div></div>`;
             
             const cColor = stats.totalNetPnl >= 0 ? 'text-emerald-500' : 'text-rose-500';
             const cBg = stats.totalNetPnl >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/50' : 'bg-rose-100 dark:bg-rose-900/50';
             const cIcon = stats.totalNetPnl >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
             
-            html += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between md:col-span-2 lg:col-span-1 shadow-sm">
+            mainHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between md:col-span-2 lg:col-span-1 shadow-sm hover:shadow-md transition ring-1 ring-emerald-500/20">
                 <div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">累计总盈亏</p><p class="text-2xl font-bold ${cColor}">${stats.totalNetPnl >= 0?'+':''}$${stats.totalNetPnl.toFixed(2)}</p></div>
                 <div class="w-12 h-12 rounded-full ${cBg} flex items-center justify-center shrink-0 text-${stats.totalNetPnl >= 0 ? 'emerald':'rose'}-500"><i class="fa-solid ${cIcon} text-xl"></i></div>
             </div>`;
+            mainRow.innerHTML = mainHtml;
+
+            // 高阶第二行按配置显示
+            let advHtml = '';
+            if(settings.dashboard.maxDrawdown) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大回撤</p><p class="text-xl font-bold text-rose-500">-$${stats.maxDrawdown}</p></div><div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-500"><i class="fa-solid fa-water"></i></div></div>`;
+            if(settings.dashboard.sharpe) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">夏普比率</p><p class="text-xl font-bold dark:text-white">${stats.sharpe}</p></div><div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500"><i class="fa-solid fa-chart-simple"></i></div></div>`;
+            if(settings.dashboard.expectancy) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">单笔期望</p><p class="text-xl font-bold dark:text-white">$${stats.expectancy}</p></div><div class="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-500"><i class="fa-solid fa-bullseye"></i></div></div>`;
+            if(settings.dashboard.streaks) advHtml += `<div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700 flex items-center justify-between"><div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">极值(连胜/连亏)</p><p class="text-xl font-bold dark:text-white"><span class="text-emerald-500">${stats.maxWinStreak}</span> / <span class="text-rose-500">${stats.maxLossStreak}</span></p></div><div class="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center text-pink-500"><i class="fa-solid fa-fire"></i></div></div>`;
             
-            c.innerHTML = html;
+            advRow.innerHTML = advHtml;
+
+            // 智能隐藏折叠按钮
+            const toggleIcon = document.getElementById('dash-collapse-icon');
+            if(advHtml === '') {
+                toggleIcon.style.display = 'none';
+                advRow.classList.add('hidden');
+            } else {
+                toggleIcon.style.display = 'inline-block';
+                if (!dashboardCollapsed) {
+                    advRow.classList.remove('hidden');
+                    toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                }
+            }
         }
 
         // --- 7. 设置弹窗与预设逻辑 ---
@@ -787,12 +908,11 @@
             });
         }
 
-        function openSettings() {
+        window.openSettings = function() {
             document.getElementById('set-exchanges').value = settings.exchanges;
             document.getElementById('set-tickers').value = settings.tickers;
             document.getElementById('set-strategies').value = settings.strategies;
             
-            document.getElementById('cfg-profitfactor').checked = settings.dashboard.profitFactor;
             document.getElementById('cfg-maxdrawdown').checked = settings.dashboard.maxDrawdown;
             document.getElementById('cfg-sharpe').checked = settings.dashboard.sharpe;
             document.getElementById('cfg-expectancy').checked = settings.dashboard.expectancy;
@@ -810,16 +930,15 @@
             document.getElementById('settings-modal').classList.remove('hidden');
             document.getElementById('settings-modal').classList.add('flex');
         }
-        function closeSettings() { 
+        window.closeSettings = function() { 
             document.getElementById('settings-modal').classList.remove('flex');
             document.getElementById('settings-modal').classList.add('hidden');
         }
-        function saveSettings() {
+        window.saveSettings = function() {
             settings.exchanges = document.getElementById('set-exchanges').value;
             settings.tickers = document.getElementById('set-tickers').value;
             settings.strategies = document.getElementById('set-strategies').value;
             
-            settings.dashboard.profitFactor = document.getElementById('cfg-profitfactor').checked;
             settings.dashboard.maxDrawdown = document.getElementById('cfg-maxdrawdown').checked;
             settings.dashboard.sharpe = document.getElementById('cfg-sharpe').checked;
             settings.dashboard.expectancy = document.getElementById('cfg-expectancy').checked;
@@ -834,7 +953,7 @@
             settings.tableCols.gross = document.getElementById('col-gross').checked;
             settings.tableCols.duration = document.getElementById('col-duration').checked;
 
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){}
             updateFormPresets();
             closeSettings();
             renderDashboard(); 
@@ -872,14 +991,14 @@
             renderImagePreviews();
         }
 
-        async function handleImageSelect(event) {
+        window.handleImageSelect = async function(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
             await processFiles(files);
             event.target.value = '';
         }
 
-        function removeImage(index) {
+        window.removeImage = function(index) {
             pendingImages.splice(index, 1);
             renderImagePreviews();
         }
@@ -902,21 +1021,35 @@
             });
         }
         
-        function viewImageFromUrl(url) {
+        window.viewImageFromUrl = function(url) {
             document.getElementById('viewer-img').src = url;
             document.getElementById('image-viewer-modal').classList.remove('hidden');
             document.getElementById('image-viewer-modal').classList.add('flex');
         }
-        function viewImageFromDetail() {
-            if(currentViewingTradeImg) viewImageFromUrl(currentViewingTradeImg);
-        }
-        function closeImageViewer() {
+        window.closeImageViewer = function() {
             document.getElementById('image-viewer-modal').classList.remove('flex');
             document.getElementById('image-viewer-modal').classList.add('hidden');
             document.getElementById('viewer-img').src = '';
         }
 
         // --- 8. 表单联动推算逻辑 ---
+        let optionalFieldsOpen = false;
+        window.toggleOptionalFields = function() {
+            optionalFieldsOpen = !optionalFieldsOpen;
+            const container = document.getElementById('optional-fields-container');
+            const icon = document.getElementById('icon-optional');
+            const text = document.getElementById('text-optional');
+            if (optionalFieldsOpen) {
+                container.classList.remove('hidden');
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                text.innerText = '收起高级选项';
+            } else {
+                container.classList.add('hidden');
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+                text.innerText = '展开高级选项 (目标净利润/进出场时间/情绪标签)';
+            }
+        }
+
         function autoDetectDirection() {
             const entry = parseFloat(document.getElementById('actualEntry').value);
             const exit = parseFloat(document.getElementById('exitPrice').value);
@@ -926,6 +1059,7 @@
             }
             onDependencyChange();
         }
+
         function calcMarginFromTarget() {
             const targetPnl = parseFloat(document.getElementById('targetNetPnl').value);
             const direction = document.getElementById('direction').value;
@@ -945,6 +1079,7 @@
             document.getElementById('margin').value = margin.toFixed(2);
             autoUpdatePnlType(margin); 
         }
+
         function autoUpdatePnlType(marginVal) {
             const margin = marginVal !== undefined ? marginVal : parseFloat(document.getElementById('margin').value);
             const direction = document.getElementById('direction').value;
@@ -962,14 +1097,16 @@
                 else { pnlTypeSelect.value = 'BE'; }
             }
         }
+
         function onDependencyChange() {
             if (document.getElementById('targetNetPnl').value !== '') calcMarginFromTarget(); else autoUpdatePnlType();
         }
         function onMarginManualInput() { document.getElementById('targetNetPnl').value = ''; autoUpdatePnlType(); }
 
         // --- 9. 编辑与表单提交逻辑 (超强容错版) ---
-        function editTrade(id) {
-            const t = trades.find(item => item.id == id);
+        window.editTrade = function(id) {
+            id = Number(id); // 保证类型绝对安全
+            const t = trades.find(item => item.id === id);
             if(!t) return;
             editingTradeId = id;
             document.getElementById('date').value = t.date;
@@ -991,6 +1128,11 @@
             document.getElementById('notes').rows = Math.max(6, document.getElementById('notes').value.split('\n').length);
             pendingImages = [...(t.images || [])]; renderImagePreviews();
             
+            // 编辑时若包含高级选项，则自动展开
+            if ((t.entryTime || t.exitTime || t.tags) && !optionalFieldsOpen) {
+                toggleOptionalFields();
+            }
+
             document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen mr-2 text-blue-500"></i>编辑历史记录';
             document.getElementById('form-section').classList.add('ring-2', 'ring-blue-400', 'shadow-lg');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
@@ -999,13 +1141,15 @@
             document.getElementById('form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
-        function cancelEdit() {
+        window.cancelEdit = function() {
             editingTradeId = null; 
             document.getElementById('trade-form').reset();
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('exchange').value = getExchangesConfig()[0].name;
             pendingImages = []; renderImagePreviews(); document.getElementById('notes').rows = 2;
             
+            if (optionalFieldsOpen) toggleOptionalFields(); // 恢复收起状态
+
             document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2 text-emerald-500"></i>录入新交易';
             document.getElementById('form-section').classList.remove('ring-2', 'ring-blue-400', 'shadow-lg');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
@@ -1013,110 +1157,178 @@
             document.getElementById('icon-submit').className = 'fa-solid fa-plus mr-2';
         }
 
-        document.getElementById('trade-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // 绑定最核心的提交事件 (置于初始化函数中，确保最高执行权限)
+        function attachEvents() {
+            document.getElementById('actualEntry').addEventListener('input', autoDetectDirection);
+            document.getElementById('exitPrice').addEventListener('input', autoDetectDirection);
+            ['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
+            document.getElementById('targetNetPnl').addEventListener('input', calcMarginFromTarget);
+            document.getElementById('margin').addEventListener('input', onMarginManualInput);
+
+            document.getElementById('tags').addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    const val = this.value; const parts = val.split(','); const lastPart = parts[parts.length - 1].trim().toUpperCase();
+                    if (lastPart) {
+                        const presetTags = settings.tagsPresets.split(',').map(s=>s.trim()).filter(Boolean);
+                        const match = presetTags.find(t => t.toUpperCase().startsWith(lastPart));
+                        if (match && match.toUpperCase() !== lastPart) {
+                            parts[parts.length - 1] = (parts.length > 1 ? ' ' : '') + match;
+                            this.value = parts.join(', '); e.preventDefault();
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('ticker').addEventListener('keydown', function(e) {
+                if (e.key === 'Tab' && this.value) {
+                    const match = settings.tickers.split(',').map(s=>s.trim()).filter(Boolean).find(t => t.startsWith(this.value.toUpperCase()));
+                    if (match && match !== this.value.toUpperCase()) { this.value = match; e.preventDefault(); }
+                }
+            });
+
+            const notesEl = document.getElementById('notes');
+            notesEl.addEventListener('focus', function() { this.rows = Math.max(6, this.value.split('\n').length); });
+            notesEl.addEventListener('blur', function() { if(!this.value.trim()) this.rows = 2; });
+            notesEl.addEventListener('input', function() { this.rows = Math.max(6, this.value.split('\n').length); });
+            notesEl.addEventListener('paste', async (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items; const files = [];
+                for (let i in items) { if (items[i].kind === 'file' && items[i].type.startsWith('image/')) files.push(items[i].getAsFile()); }
+                if (files.length > 0) { e.preventDefault(); await processFiles(files); }
+            });
+            notesEl.addEventListener('dragover', (e) => { e.preventDefault(); notesEl.classList.add('drag-active'); });
+            notesEl.addEventListener('dragleave', (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); });
+            notesEl.addEventListener('drop', async (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); if (e.dataTransfer.files.length > 0) await processFiles(e.dataTransfer.files); });
+
+            // 核心防御：提交拦截
+            document.getElementById('trade-form').addEventListener('submit', async function(e) {
+                e.preventDefault(); 
+                try {
+                    const exchange = document.getElementById('exchange').value;
+                    const direction = document.getElementById('direction').value;
+                    const margin = parseFloat(document.getElementById('margin').value);
+                    const leverage = parseFloat(document.getElementById('leverage').value);
+                    const actualEntry = parseFloat(document.getElementById('actualEntry').value);
+                    const exitPrice = parseFloat(document.getElementById('exitPrice').value);
+                    const fundingFee = parseFloat(document.getElementById('fundingFee').value) || 0;
+
+                    const { grossPnl, fee, rebate, netPnl } = calculateTradeData(exchange, direction, margin, leverage, actualEntry, exitPrice, fundingFee);
+                    const inputTicker = document.getElementById('ticker').value.toUpperCase();
+                    const inputStrategy = document.getElementById('strategy').value;
+                    
+                    let inputTagsRaw = document.getElementById('tags').value;
+                    let inputTagsArr = inputTagsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+                    let currentTags = settings.tagsPresets.split(',').map(s=>s.trim()).filter(Boolean);
+                    let changed = false;
+                    
+                    let currentTickers = settings.tickers.split(',').map(s => s.trim()).filter(Boolean);
+                    if (!currentTickers.includes(inputTicker)) { currentTickers.push(inputTicker); settings.tickers = currentTickers.join(', '); changed = true; }
+                    
+                    inputTagsArr.forEach(t => {
+                        if(!currentTags.includes(t)) { currentTags.push(t); changed = true; }
+                    });
+                    if(changed) {
+                        settings.tagsPresets = currentTags.join(', ');
+                        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){}
+                        updateFormPresets();
+                    }
+
+                    const newTrade = {
+                        id: editingTradeId ? Number(editingTradeId) : Date.now(), // 极强安全转换
+                        date: document.getElementById('date').value,
+                        entryTime: document.getElementById('entryTime').value,
+                        exitTime: document.getElementById('exitTime').value,
+                        tags: inputTagsRaw,
+                        exchange: exchange,
+                        ticker: inputTicker,
+                        strategy: inputStrategy,
+                        direction: direction,
+                        margin: margin,
+                        leverage: leverage,
+                        actualEntry: actualEntry,
+                        exitPrice: exitPrice,
+                        pnlType: document.getElementById('pnlType').value,
+                        fundingFee: fundingFee,
+                        notes: document.getElementById('notes').value || '-',
+                        images: [...pendingImages], 
+                        fee: fee,
+                        rebate: rebate,
+                        grossPnl: grossPnl,
+                        netPnl: netPnl
+                    };
+
+                    if (editingTradeId) {
+                        const index = trades.findIndex(t => t.id === Number(editingTradeId));
+                        if(index > -1) trades[index] = newTrade;
+                    } else {
+                        trades.unshift(newTrade);
+                    }
+
+                    // 写入数据引擎
+                    await StorageEngine.put(newTrade, trades);
+                    
+                    if (editingTradeId) {
+                        cancelEdit();
+                    } else {
+                        document.getElementById('trade-form').reset();
+                        document.getElementById('date').valueAsDate = new Date();
+                        document.getElementById('exchange').value = exchange;
+                        document.getElementById('strategy').value = inputStrategy;
+                        pendingImages = [];
+                        renderImagePreviews();
+                        document.getElementById('notes').rows = 2;
+                        if (optionalFieldsOpen) toggleOptionalFields();
+                    }
+
+                    const tradeDate = new Date(newTrade.date);
+                    currentCalDate = new Date(tradeDate.getFullYear(), tradeDate.getMonth(), 1);
+                    
+                    renderApp();
+
+                } catch (err) {
+                    if (!editingTradeId && trades.length > 0 && trades[0].id >= Date.now() - 10000) {
+                        trades.shift(); 
+                    }
+                    alert("数据保存失败！\n原因：" + err.message);
+                    console.error("Save Error:", err);
+                }
+            });
+        }
+
+        window.onload = async () => {
+            // 确保数据库优先加载
+            await StorageEngine.init();
+            trades = await StorageEngine.getAll();
+
+            // 绑定事件和安全拦截器
+            try { attachEvents(); } catch(e) { console.error("Event Binding Error", e); }
             
-            // 全局 Try...Catch，彻底杜绝静默报错
+            // 安全渲染 UI
             try {
-                const exchange = document.getElementById('exchange').value;
-                const direction = document.getElementById('direction').value;
-                const margin = parseFloat(document.getElementById('margin').value);
-                const leverage = parseFloat(document.getElementById('leverage').value);
-                const actualEntry = parseFloat(document.getElementById('actualEntry').value);
-                const exitPrice = parseFloat(document.getElementById('exitPrice').value);
-                const fundingFee = parseFloat(document.getElementById('fundingFee').value) || 0;
-
-                const { grossPnl, fee, rebate, netPnl } = calculateTradeData(exchange, direction, margin, leverage, actualEntry, exitPrice, fundingFee);
-                const inputTicker = document.getElementById('ticker').value.toUpperCase();
-                const inputStrategy = document.getElementById('strategy').value;
-                
-                let inputTagsRaw = document.getElementById('tags').value;
-                let inputTagsArr = inputTagsRaw.split(',').map(s=>s.trim()).filter(Boolean);
-                let currentTags = settings.tagsPresets.split(',').map(s=>s.trim()).filter(Boolean);
-                let changed = false;
-                
-                let currentTickers = settings.tickers.split(',').map(s => s.trim()).filter(Boolean);
-                if (!currentTickers.includes(inputTicker)) { currentTickers.push(inputTicker); settings.tickers = currentTickers.join(', '); changed = true; }
-                
-                inputTagsArr.forEach(t => {
-                    if(!currentTags.includes(t)) { currentTags.push(t); changed = true; }
-                });
-                if(changed) {
-                    settings.tagsPresets = currentTags.join(', ');
-                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-                    updateFormPresets();
-                }
-
-                const newTrade = {
-                    id: editingTradeId ? editingTradeId : Date.now(),
-                    date: document.getElementById('date').value,
-                    entryTime: document.getElementById('entryTime').value,
-                    exitTime: document.getElementById('exitTime').value,
-                    tags: inputTagsRaw,
-                    exchange: exchange,
-                    ticker: inputTicker,
-                    strategy: inputStrategy,
-                    direction: direction,
-                    margin: margin,
-                    leverage: leverage,
-                    actualEntry: actualEntry,
-                    exitPrice: exitPrice,
-                    pnlType: document.getElementById('pnlType').value,
-                    fundingFee: fundingFee,
-                    notes: document.getElementById('notes').value || '-',
-                    images: [...pendingImages], 
-                    fee: fee,
-                    rebate: rebate,
-                    grossPnl: grossPnl,
-                    netPnl: netPnl
-                };
-
-                // 先更新内存中的数据
-                if (editingTradeId) {
-                    const index = trades.findIndex(t => t.id == editingTradeId);
-                    if(index > -1) trades[index] = newTrade;
-                } else {
-                    trades.unshift(newTrade);
-                }
-
-                // 核心：强制调用存储引擎保存数据
-                await StorageEngine.put(newTrade, trades);
-                
-                // 仅当存储成功后，才清空表单并更新UI
-                if (editingTradeId) {
-                    cancelEdit();
-                } else {
-                    document.getElementById('trade-form').reset();
-                    document.getElementById('date').valueAsDate = new Date();
-                    document.getElementById('exchange').value = exchange;
-                    document.getElementById('strategy').value = inputStrategy;
-                    pendingImages = [];
-                    renderImagePreviews();
-                    document.getElementById('notes').rows = 2;
-                }
-
-                const tradeDate = new Date(newTrade.date);
-                currentCalDate = new Date(tradeDate.getFullYear(), tradeDate.getMonth(), 1);
+                document.getElementById('date').valueAsDate = new Date();
+                updateFormPresets();
+                const engineName = StorageEngine.useIDB ? 'IndexedDB' : 'LocalStorage (降级)';
+                document.getElementById('status-indicator').innerHTML = `<i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i>V22 全局安全防御已启动，本地数据库运作正常 (当前引擎: ${engineName})`;
                 renderApp();
-
-            } catch (err) {
-                // 如果发生任何错误，终止操作并警告用户
-                if (!editingTradeId && trades.length > 0 && trades[0].id >= Date.now() - 10000) {
-                    trades.shift(); // 回退内存中刚刚添加的失败数据
-                }
-                alert("数据保存失败！\n原因：" + err.message + "\n\n请检查是否存储已满或包含超大图片。");
-                console.error("Save Error:", err);
+            } catch(e) {
+                console.error("UI Rendering Error", e);
             }
-        });
+        };
 
         // --- 11. 视图渲染核心 ---
-        function switchViewMode(mode) {
+        window.switchViewMode = function(mode) {
             currentViewMode = mode;
             document.getElementById('table-view').classList.toggle('hidden', mode !== 'table');
             document.getElementById('notes-view').classList.toggle('hidden', mode !== 'notes');
+            
+            // 自动平滑滚动到复盘时间轴区域
+            if (mode === 'notes') {
+                setTimeout(() => {
+                    document.getElementById('records-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+            }
         }
 
-        function filterTrades(data) {
+        window.filterTrades = function(data) {
             const start = document.getElementById('table-start').value;
             const end = document.getElementById('table-end').value;
             const exchange = document.getElementById('filter-exchange').value;
@@ -1137,14 +1349,14 @@
             });
         }
         
-        function updateFilteredView() {
+        window.updateFilteredView = function() {
             const filteredData = filterTrades(trades);
             renderTable(filteredData);
             renderNotesTimeline(filteredData); 
             renderFilterSummary(filteredData);
         }
 
-        function clearTableFilter() { 
+        window.clearTableFilter = function() { 
             ['table-start','table-end','filter-exchange','filter-ticker','filter-direction','filter-strategy','filter-pnlType'].forEach(id => document.getElementById(id).value = '');
             updateFilteredView(); 
         }
@@ -1160,6 +1372,10 @@
             document.getElementById('fs-wlratio').innerText = stats.wlRatio;
             document.getElementById('fs-profit-factor').innerText = stats.profitFactor;
             
+            document.getElementById('fs-maxdrawdown').innerText = '-$' + stats.maxDrawdown;
+            document.getElementById('fs-sharpe').innerText = stats.sharpe;
+            document.getElementById('fs-expectancy').innerText = '$' + stats.expectancy;
+
             const pnlEl = document.getElementById('fs-pnl');
             pnlEl.innerText = `${stats.totalNetPnl >= 0 ? '+' : ''}$${stats.totalNetPnl.toFixed(2)}`;
             pnlEl.className = `font-bold ${stats.totalNetPnl > 0 ? 'text-emerald-500' : (stats.totalNetPnl < 0 ? 'text-rose-500' : 'text-gray-900 dark:text-gray-100')}`;
@@ -1167,7 +1383,7 @@
             if(filterChartOpen) renderFilterChart(filteredData);
         }
 
-        function toggleFilterChart(forceUpdateColor = false) {
+        window.toggleFilterChart = function(forceUpdateColor = false) {
             if(!forceUpdateColor) filterChartOpen = !filterChartOpen;
             const container = document.getElementById('filter-chart-container');
             const btnIcon = document.getElementById('icon-toggle-fchart');
@@ -1187,6 +1403,7 @@
 
         function renderFilterChart(filteredData) {
             if(!filterChartOpen) return;
+            if (typeof Chart === 'undefined') return;
             const ctx = document.getElementById('filterPnlChart').getContext('2d');
             const chrono = [...filteredData].reverse();
             let rawLabels = ['起始'], cum = [0], cur = 0;
@@ -1203,7 +1420,7 @@
             });
         }
 
-        // --- 表格视图渲染 (动态列) ---
+        // --- 表格视图渲染 ---
         function renderTable(filteredTrades) {
             const thead = document.getElementById('table-header');
             const tbody = document.getElementById('table-body');
@@ -1335,66 +1552,6 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
-        // --- 初始化启动 ---
-        window.onload = async () => {
-            try {
-                await IDB.init();
-                trades = await IDB.getAll();
-            } catch (err) {
-                alert("存储引擎初始化异常！");
-                console.error(err);
-            }
-            
-            document.getElementById('date').valueAsDate = new Date();
-            updateFormPresets();
-            renderApp();
-            
-            document.getElementById('actualEntry').addEventListener('input', autoDetectDirection);
-            document.getElementById('exitPrice').addEventListener('input', autoDetectDirection);
-            ['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
-            document.getElementById('targetNetPnl').addEventListener('input', calcMarginFromTarget);
-            document.getElementById('margin').addEventListener('input', onMarginManualInput);
-
-            const tagsInput = document.getElementById('tags');
-            tagsInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab') {
-                    const val = this.value;
-                    const parts = val.split(',');
-                    const lastPart = parts[parts.length - 1].trim().toUpperCase();
-                    if (lastPart) {
-                        const presetTags = settings.tagsPresets.split(',').map(s=>s.trim()).filter(Boolean);
-                        const match = presetTags.find(t => t.toUpperCase().startsWith(lastPart));
-                        if (match && match.toUpperCase() !== lastPart) {
-                            parts[parts.length - 1] = (parts.length > 1 ? ' ' : '') + match;
-                            this.value = parts.join(', ');
-                            e.preventDefault();
-                        }
-                    }
-                }
-            });
-
-            const tickerInput = document.getElementById('ticker');
-            tickerInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab' && this.value) {
-                    const match = settings.tickers.split(',').map(s=>s.trim()).filter(Boolean).find(t => t.startsWith(this.value.toUpperCase()));
-                    if (match && match !== this.value.toUpperCase()) { this.value = match; e.preventDefault(); }
-                }
-            });
-
-            const notesEl = document.getElementById('notes');
-            notesEl.addEventListener('focus', function() { this.rows = Math.max(6, this.value.split('\n').length); });
-            notesEl.addEventListener('blur', function() { if(!this.value.trim()) this.rows = 2; });
-            notesEl.addEventListener('input', function() { this.rows = Math.max(6, this.value.split('\n').length); });
-            notesEl.addEventListener('paste', async (e) => {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items; const files = [];
-                for (let i in items) { if (items[i].kind === 'file' && items[i].type.startsWith('image/')) files.push(items[i].getAsFile()); }
-                if (files.length > 0) { e.preventDefault(); await processFiles(files); }
-            });
-            notesEl.addEventListener('dragover', (e) => { e.preventDefault(); notesEl.classList.add('drag-active'); });
-            notesEl.addEventListener('dragleave', (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); });
-            notesEl.addEventListener('drop', async (e) => { e.preventDefault(); notesEl.classList.remove('drag-active'); if (e.dataTransfer.files.length > 0) await processFiles(e.dataTransfer.files); });
-        };
     </script>
 </body>
 </html>
