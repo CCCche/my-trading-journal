@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>量化交易日志追踪系统 v22.0 (终极稳定版)</title>
+    <title>量化交易日志追踪系统 v26.4 (全模型支持版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -20,7 +20,11 @@
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 核心图表与缩放插件依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
     
     <style>
         input[type="number"]::-webkit-inner-spin-button,
@@ -46,7 +50,7 @@
         
         <header class="flex flex-wrap items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 gap-4">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-blue-500 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded ml-2">V22 终极稳定版</span>
+                <i class="fa-solid fa-chart-line text-blue-500 mr-2"></i>交易日志追踪 <span class="text-xs font-normal text-purple-500 bg-purple-100 dark:bg-purple-900/50 px-2 py-0.5 rounded ml-2">V26.4 全模型支持版</span>
             </h1>
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="toggleDarkMode()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
@@ -92,29 +96,74 @@
                         <button onclick="clearChartFilter()" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
                 </div>
+                
+                <div class="flex flex-wrap gap-2 mb-4 text-xs">
+                    <button onclick="setChartPeriod(1)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">1天</button>
+                    <button onclick="setChartPeriod(7)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">7天</button>
+                    <button onclick="setChartPeriod(30)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">30天</button>
+                    <button onclick="setChartPeriod(180)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">180天</button>
+                    <button onclick="setChartPeriod(360)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">360天</button>
+                    <button onclick="clearChartFilter()" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition">全部</button>
+                </div>
+
                 <div class="w-full flex-1 min-h-[250px] relative" id="chart-wrapper">
                     <canvas id="pnlChart"></canvas>
                 </div>
             </section>
 
             <section class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white"><i class="fa-regular fa-calendar-days mr-2 text-purple-500"></i>盈亏日历</h2>
-                    <div class="flex items-center space-x-3">
+                <div class="flex justify-between items-center mb-4 gap-2 flex-wrap">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white"><i class="fa-regular fa-calendar-days mr-2 text-purple-500"></i>盈亏日历</h2>
+                        
+                        <div class="flex bg-gray-200/60 dark:bg-gray-700 p-1 rounded-lg">
+                            <button id="btn-view-cal" onclick="switchCalViewMode('calendar')" class="px-2 py-1 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm transition-all"><i class="fa-solid fa-calendar mr-1"></i>日历</button>
+                            <button id="btn-view-bar" onclick="switchCalViewMode('bar')" class="px-2 py-1 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all"><i class="fa-solid fa-chart-column mr-1"></i>柱状图</button>
+                        </div>
+                    </div>
+                    
+                    <div id="cal-controls" class="flex items-center space-x-3">
                         <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"><i class="fa-solid fa-chevron-left"></i></button>
                         <span id="calendar-month-year" class="font-medium text-sm text-gray-700 dark:text-gray-300 w-20 text-center">2023年10月</span>
                         <button onclick="changeMonth(1)" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                 </div>
-                <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+
+                <div id="bar-controls" class="hidden flex-wrap gap-2 mb-4 text-xs">
+                    <button onclick="setBarPeriod(7)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-100 hover:text-purple-600 dark:hover:bg-purple-900/50 dark:hover:text-purple-400 transition">7天</button>
+                    <button onclick="setBarPeriod(30)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-100 hover:text-purple-600 dark:hover:bg-purple-900/50 dark:hover:text-purple-400 transition">30天</button>
+                    <button onclick="setBarPeriod(90)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-100 hover:text-purple-600 dark:hover:bg-purple-900/50 dark:hover:text-purple-400 transition">90天</button>
+                    <button onclick="setBarPeriod(0)" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-100 hover:text-purple-600 dark:hover:bg-purple-900/50 dark:hover:text-purple-400 transition">全部</button>
+                    <button onclick="resetBarZoom()" class="ml-auto text-purple-500 hover:text-purple-600 transition flex items-center"><i class="fa-solid fa-compress mr-1"></i>重置缩放</button>
                 </div>
-                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 flex-1 content-start"></div>
+
+                <div id="cal-view-container" class="flex-1 flex flex-col">
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 flex-1 content-start"></div>
+                </div>
+
+                <div id="bar-view-container" class="hidden flex-1 min-h-[250px] relative">
+                    <canvas id="dailyBarChart"></canvas>
+                </div>
             </section>
         </div>
 
         <section class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-300" id="form-section">
-            <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white" id="form-title"><i class="fa-solid fa-pen-to-square mr-2 text-emerald-500"></i>录入新交易</h2>
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                    <i class="fa-solid fa-pen-to-square mr-2 text-emerald-500" id="form-title-icon"></i>
+                    <span id="form-title-text">录入新交易</span>
+                </h2>
+                <div class="flex items-center" title="点击选择文件或直接在页面中按下 Ctrl+V 粘贴截图">
+                    <button type="button" onclick="document.getElementById('ocr-upload').click()" class="text-xs px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-800/60 transition shadow-sm border border-indigo-200 dark:border-indigo-800 flex items-center">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 识图填表 <span class="ml-1 opacity-70 text-[10px]">(支持 Ctrl+V)</span>
+                    </button>
+                    <input type="file" id="ocr-upload" class="hidden" accept="image/*" onchange="handleOCR(event)">
+                </div>
+            </div>
+
             <form id="trade-form" class="flex flex-col gap-4">
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
@@ -184,23 +233,37 @@
 
                 <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
                     <button type="button" onclick="toggleOptionalFields()" class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center font-medium transition-colors">
-                        <i class="fa-solid fa-chevron-down mr-2" id="icon-optional"></i><span id="text-optional">展开高级选项 (目标净利润/进出场时间/情绪标签)</span>
+                        <i class="fa-solid fa-chevron-down mr-2" id="icon-optional"></i><span id="text-optional">展开高级选项 (目标利润反推/进出场时间/情绪标签)</span>
                     </button>
                 </div>
 
                 <div id="optional-fields-container" class="hidden grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
                     <div class="flex flex-col relative group">
-                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">目标净利润 <span class="text-[10px] text-orange-500 dark:text-orange-400 ml-1 font-normal">(支持负数)</span></label>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs text-gray-500 dark:text-gray-400">目标利润 <span class="text-[10px] text-orange-500 dark:text-orange-400 font-normal">(支持负数)</span></label>
+                            <select id="targetPnlMode" class="text-[10px] bg-transparent text-blue-500 hover:text-blue-600 outline-none cursor-pointer p-0 border-none font-medium text-right" onchange="calcMarginFromTarget()">
+                                <option value="gross">按毛利润计算</option>
+                                <option value="net">按净利润计算</option>
+                            </select>
+                        </div>
                         <input type="number" id="targetNetPnl" step="any" placeholder="填此可反算保证金" class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm transition-colors bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-gray-800 dark:text-gray-200">
                     </div>
+                    
                     <div class="flex flex-col">
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">进场时间</label>
-                        <input type="datetime-local" id="entryTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                        <div class="flex space-x-1.5">
+                            <input type="date" id="entryDate" class="w-[55%] px-2 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                            <input type="time" id="entryTime" class="w-[45%] px-2 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">出场时间</label>
-                        <input type="datetime-local" id="exitTime" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                        <div class="flex space-x-1.5">
+                            <input type="date" id="exitDate" class="w-[55%] px-2 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                            <input type="time" id="exitTime" class="w-[45%] px-2 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors">
+                        </div>
                     </div>
+
                     <div class="flex flex-col">
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1">标签与情绪 <span class="text-[10px] text-gray-400 ml-1 font-normal">(Tab自动补全)</span></label>
                         <input type="text" id="tags" list="tags-list" placeholder="如: FOMO, 右侧突破" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-purple-600 dark:text-purple-400 transition-colors">
@@ -218,13 +281,13 @@
                             </button>
                         </div>
                     </div>
-                    <textarea id="notes" rows="2" placeholder="这笔交易的逻辑是... (支持直接复制 Ctrl+V 粘贴图片，或拖拽图片到此框中)" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none transition-all"></textarea>
+                    <textarea id="notes" rows="2" placeholder="这笔交易的逻辑是... (在框内支持直接粘贴/拖拽图片作为复盘附件)" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none transition-all"></textarea>
                     <div id="image-preview-container" class="hidden mt-3 flex flex-wrap gap-3"></div>
                 </div>
 
                 <div class="flex justify-between items-center mt-2 pt-4 border-t border-gray-100 dark:border-gray-800">
                     <div class="text-xs text-gray-500 dark:text-gray-400 flex-1 mr-4 hidden sm:block" id="status-indicator">
-                        <i class="fa-solid fa-spinner fa-spin text-blue-400 mr-1"></i>正在初始化双核存储引擎...
+                        <i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i>正在初始化双核存储引擎...
                     </div>
                     <div class="flex space-x-3 w-full sm:w-auto justify-end">
                         <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden px-5 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-lg transition-colors shadow-sm shrink-0">
@@ -292,7 +355,7 @@
             </div>
 
             <div id="table-view" class="overflow-x-auto block">
-                <table class="w-full text-left border-collapse whitespace-nowrap">
+                <table class="w-full text-left border-collapse whitespace-nowrap table-auto">
                     <thead>
                         <tr class="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider" id="table-header">
                         </tr>
@@ -308,6 +371,7 @@
 
     </div>
 
+    <!-- Modals -->
     <div id="day-records-modal" class="fixed inset-0 bg-black/60 z-[65] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl shadow-2xl max-h-[90vh] flex flex-col border dark:border-gray-700">
             <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 rounded-t-xl">
@@ -384,7 +448,34 @@
                 <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-700 dark:hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="p-6 space-y-6">
-                <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                <!-- AI 识图动态配置区 -->
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                    <label class="block text-sm text-indigo-800 dark:text-indigo-300 mb-3 font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI 识图配置 (支持多模型)</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-indigo-700 dark:text-indigo-400 mb-1 font-medium">接口协议</label>
+                            <select id="cfg-ai-protocol" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:text-gray-200 transition-colors">
+                                <option value="gemini">Google Gemini 原生协议</option>
+                                <option value="openai">OpenAI 兼容协议 (支持GPT/DeepSeek等)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-indigo-700 dark:text-indigo-400 mb-1 font-medium">API Base URL (OpenAI协议必填)</label>
+                            <input type="text" id="cfg-ai-baseurl" placeholder="如: https://api.deepseek.com/v1 或 https://api.openai.com/v1" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:text-gray-200 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-indigo-700 dark:text-indigo-400 mb-1 font-medium">API Key</label>
+                            <input type="password" id="cfg-ai-key" placeholder="在此填入 API Key" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:text-gray-200 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-indigo-700 dark:text-indigo-400 mb-1 font-medium">使用的模型名称 (需支持视觉)</label>
+                            <input type="text" id="cfg-ai-model" placeholder="例如: gemini-1.5-flash 或 deepseek-vl" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:text-gray-200 transition-colors font-mono">
+                        </div>
+                    </div>
+                    <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-3 opacity-80"><i class="fa-solid fa-circle-info mr-1"></i>如果使用 Gemini 请选择原生协议；如果要用 DeepSeek、GPT-4o、通义千问 等其他大厂接口，请选 OpenAI 兼容协议并填写对应的 Base URL。</p>
+                </div>
+
+                <div class="bg-white dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
                     <label class="block text-sm text-gray-800 dark:text-gray-200 mb-3 font-bold"><i class="fa-solid fa-desktop mr-2 text-blue-500"></i>主面板高级指标展示配置</label>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                         <label class="flex items-center space-x-2"><input type="checkbox" id="cfg-maxdrawdown" class="rounded text-blue-600 focus:ring-blue-500"> <span class="text-gray-600 dark:text-gray-300">最大回撤</span></label>
@@ -395,7 +486,7 @@
                     </div>
                 </div>
 
-                <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
                     <label class="block text-sm text-gray-800 dark:text-gray-200 mb-3 font-bold"><i class="fa-solid fa-table-columns mr-2 text-purple-500"></i>历史记录表格列展示</label>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                         <label class="flex items-center space-x-2"><input type="checkbox" id="col-exchange" class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-gray-600 dark:text-gray-300">交易所</span></label>
@@ -438,14 +529,312 @@
     </div>
 
     <script>
-        window.exportData = function() {
+        // ================= 安全防 XSS 函数 =================
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // ================= 对象 URL 内存管理器 =================
+        const ObjectUrlManager = {
+            urls: new Set(),
+            create(blobOrString) {
+                if (typeof blobOrString === 'string') return blobOrString;
+                if (!blobOrString || !(blobOrString instanceof Blob)) return ''; 
+                const url = URL.createObjectURL(blobOrString);
+                this.urls.add(url);
+                return url;
+            },
+            revokeAll() {
+                this.urls.forEach(url => URL.revokeObjectURL(url));
+                this.urls.clear();
+            }
+        };
+
+        function getLocalDateString() {
+            const d = new Date();
+            return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        }
+
+        // ================= AI 图像识别处理 =================
+        window.handleOCR = async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            await handleOCRFile(file);
+            e.target.value = ''; 
+        };
+
+        document.addEventListener('paste', async (e) => {
+            if (e.target && e.target.id === 'notes') return; 
+
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let file = null;
+            for (let i in items) {
+                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+                    file = items[i].getAsFile();
+                    break;
+                }
+            }
+            if (file) {
+                e.preventDefault(); 
+                await handleOCRFile(file);
+            }
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        window.handleOCRFile = async function(file) {
+            const protocol = settings.aiProtocol || 'gemini';
+            const apiKey = settings.aiApiKey || '';
+            const modelName = settings.aiModelName || 'gemini-1.5-flash';
+            const baseUrl = settings.aiBaseUrl || 'https://api.openai.com/v1';
+
+            if (!apiKey) {
+                alert("未配置 API Key！\n请点击右上角【全局设置】，配置好您所使用的大模型 API Key 后重试。");
+                openSettings();
+                return;
+            }
+
+            const statusEl = document.getElementById('status-indicator');
+            const oldStatus = statusEl.innerHTML;
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles fa-beat text-indigo-500 mr-1"></i>AI (${modelName}) 正在识别中，请稍候...`;
+            
+            try {
+                const base64Data = await fileToBase64(file);
+                
+                const prompt = `
+                    你是一个加密货币交易数据提取助手。请分析这张订单截图，提取关键数据，并严格输出为以下JSON格式。
+                    注意：不要输出任何多余的解释、markdown标记（如 \`\`\`json ），必须直接返回合法的 JSON 字符串。
+
+                    {
+                        "ticker": "提取交易标的，例如 BTC/USDT",
+                        "direction": "判断方向，如包含'做多'、'开多'、'平多'严格填入小写英文字母 long；如包含'做空'、'开空'、'平空'严格填入小写英文字母 short",
+                        "leverage": "杠杆倍数，仅保留纯数字，例如 100",
+                        "entryPrice": "开仓均价/进场价，去除千分位，仅保留纯数字",
+                        "exitPrice": "平仓均价/出场价，去除千分位，仅保留纯数字",
+                        "margin": "投入的保证金或仓位价值除以杠杆，仅保留纯数字",
+                        "netPnl": "已实现盈亏或平仓盈亏，保留正负号，去除千分位，仅保留纯数字",
+                        "openTime": "开仓/进场时间，严格格式要求 YYYY-MM-DD HH:mm。注意：绝对不要包含秒数！如果截图中有秒数请直接舍弃。如截图中没有则填空字符串",
+			"closeTime": "平仓/出场时间，严格格式要求 YYYY-MM-DD HH:mm。同样绝对不要包含秒数！如果截图中有秒数请直接舍弃。"
+                    }
+
+                    注意：如果某个字段在截图中完全找不到，请填入空字符串 "" 或 null，绝对不要改变或增加JSON的键名(keys)！
+                `;
+
+                let resultText = "";
+
+                if (protocol === 'gemini') {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: prompt },
+                                    { inline_data: { mime_type: file.type, data: base64Data } }
+                                ]
+                            }],
+                            generationConfig: {
+                                temperature: 0.1,
+                                response_mime_type: "application/json"
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`Google API 响应错误 (${response.status}): ${errText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates[0] && result.candidates[0].content.parts[0].text) {
+                        resultText = result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("API 返回的数据格式不符预期");
+                    }
+
+                } else {
+                    // OpenAI Compatible Protocol
+                    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                    const url = `${cleanBaseUrl}/chat/completions`;
+                    
+                    const payload = {
+                        model: modelName,
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: prompt },
+                                    { type: "image_url", image_url: { url: `data:${file.type};base64,${base64Data}` } }
+                                ]
+                            }
+                        ],
+                        temperature: 0.1
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`OpenAI兼容 API 响应错误 (${response.status}): ${errText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
+                        resultText = result.choices[0].message.content;
+                    } else {
+                        throw new Error("API 返回的数据格式不符预期");
+                    }
+                }
+
+                let aiText = resultText.trim();
+                const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+                
+                if (!jsonMatch) {
+                    throw new Error("AI未能返回合法的JSON结构");
+                }
+                
+                const extractedData = JSON.parse(jsonMatch[0]);
+                console.log("AI Extracted Data:", extractedData);
+                applyGeminiDataToForm(extractedData);
+                
+                statusEl.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-500 mr-1"></i><span class="text-emerald-500 font-bold">AI 提取成功！参数已自动填入。</span>';
+
+            } catch(err) {
+                console.error(err);
+                alert("AI 识别失败：" + err.message);
+                statusEl.innerHTML = oldStatus;
+            } finally {
+                setTimeout(() => {
+                    statusEl.innerHTML = oldStatus;
+                }, 4000);
+            }
+        };
+
+        // 将 AI 返回的 JSON 数据安全填入表单
+        function applyGeminiDataToForm(data) {
+            const parseNum = (val) => {
+                if (val === null || val === undefined || val === '') return '';
+                const cleaned = String(val).replace(/[^\d.-]/g, '');
+                return isNaN(parseFloat(cleaned)) ? '' : parseFloat(cleaned);
+            };
+
+            let aiDirectionFound = false;
+
+            if (data.ticker) {
+                let t = data.ticker.toUpperCase();
+                if (!t.includes('/') && t.endsWith('USDT')) t = t.replace('USDT', '/USDT');
+                document.getElementById('ticker').value = t;
+            }
+            
+            if (data.direction) {
+                const dirStr = String(data.direction).toLowerCase().trim();
+                if (dirStr.includes('long') || dirStr === '多') {
+                    document.getElementById('direction').value = 'long';
+                    aiDirectionFound = true;
+                } else if (dirStr.includes('short') || dirStr === '空') {
+                    document.getElementById('direction').value = 'short';
+                    aiDirectionFound = true;
+                }
+            }
+
+            if (data.leverage) document.getElementById('leverage').value = parseNum(data.leverage);
+            if (data.entryPrice) document.getElementById('actualEntry').value = parseNum(data.entryPrice);
+            if (data.exitPrice) document.getElementById('exitPrice').value = parseNum(data.exitPrice);
+            if (data.margin) document.getElementById('margin').value = parseNum(data.margin);
+            
+            if (data.netPnl !== null && data.netPnl !== undefined && data.netPnl !== '') {
+                const parsedPnl = parseNum(data.netPnl);
+                if (parsedPnl !== '') {
+                    document.getElementById('targetNetPnl').value = parsedPnl;
+                    document.getElementById('pnlType').value = parsedPnl > 0 ? 'TP' : (parsedPnl < 0 ? 'SL' : 'BE');
+                }
+            }
+
+            let needExpandOptionals = false;
+            let mainDateSet = false;
+
+            // 核心修复2：优先将平仓时间(closeTime)作为交易主日期(date)
+            if (data.closeTime) {
+                const parts = data.closeTime.replace(/\//g, '-').split(' ');
+                if(parts[0]) { 
+                    document.getElementById('exitDate').value = parts[0];
+                    document.getElementById('date').value = parts[0]; 
+                    mainDateSet = true;
+                }
+                if(parts[1]) document.getElementById('exitTime').value = parts[1].substring(0, 5);
+                needExpandOptionals = true;
+            }
+
+            if (data.openTime) {
+                const parts = data.openTime.replace(/\//g, '-').split(' ');
+                if(parts[0]) { 
+                    document.getElementById('entryDate').value = parts[0];
+                    if (!mainDateSet) {
+                        document.getElementById('date').value = parts[0]; 
+                    }
+                }
+                if(parts[1]) document.getElementById('entryTime').value = parts[1].substring(0, 5);
+                needExpandOptionals = true;
+            }
+
+            if (needExpandOptionals && !optionalFieldsOpen) {
+                toggleOptionalFields();
+            }
+
+            if (!aiDirectionFound) {
+                autoDetectDirection();
+            } else {
+                onDependencyChange();
+            }
+            
+            if (document.getElementById('targetNetPnl').value !== '' && (document.getElementById('margin').value === '')) {
+                calcMarginFromTarget();
+            }
+        }
+
+        window.exportData = async function() {
             if(trades.length === 0) { alert("当前没有可导出的数据！"); return; }
-            const dataStr = JSON.stringify(trades, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
+            const blobToBase64 = (blob) => new Promise(res => {
+                const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob);
+            });
+            const exportReadyTrades = await Promise.all(trades.map(async t => {
+                const newT = { ...t };
+                if (newT.images && newT.images.length > 0) {
+                    newT.images = await Promise.all(newT.images.map(async img => {
+                        return (img instanceof Blob) ? await blobToBase64(img) : img;
+                    }));
+                }
+                return newT;
+            }));
+
+            const dataStr = JSON.stringify(exportReadyTrades, null, 2);
+            const blobData = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blobData);
             const a = document.createElement('a'); 
             a.href = url;
-            a.download = `交易记录_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `交易记录_${getLocalDateString()}.json`;
             document.body.appendChild(a); 
             a.click(); 
             document.body.removeChild(a);
@@ -457,6 +846,7 @@
                 id = Number(id); 
                 trades = trades.filter(t => t.id !== id); 
                 await StorageEngine.delete(id, trades); 
+                updateFormPresets(); 
                 renderApp(); 
             }
         };
@@ -465,6 +855,7 @@
             if(confirm('警告：清空不可恢复！确认吗？')) { 
                 trades =[]; 
                 await StorageEngine.clear(); 
+                updateFormPresets(); 
                 renderApp(); 
             }
         };
@@ -483,7 +874,7 @@
                             trades = imported; 
                         } else {
                             const uniqueIds = new Set();
-                            let merged = [...imported, ...trades].filter(t => { 
+                            let merged =[...imported, ...trades].filter(t => { 
                                 if (uniqueIds.has(t.id)) return false; 
                                 uniqueIds.add(t.id); return true; 
                             });
@@ -492,6 +883,7 @@
                             await StorageEngine.putAll(merged);
                             trades = merged;
                         }
+                        updateFormPresets();
                         renderApp();
                         alert('历史破损文件导入及补全成功！');
                     } else { alert('文件格式错误：需要为数组结构。'); }
@@ -517,6 +909,7 @@
             try { localStorage.setItem('theme', theme); } catch(e){}
             if(window.pnlChartInstance) renderChart(); 
             if(window.filterPnlChartInstance) toggleFilterChart(true);
+            if(window.dailyBarChartInstance) window.updateDailyBarChart();
         }
         (function initTheme() {
             let savedTheme = null;
@@ -525,11 +918,11 @@
             else if (window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
         })();
 
-        // ================= 彻底修复漏洞的双核存储引擎 =================
-        const DB_NAME = 'QuantJournalDB_v22';
+        // ================= 双核存储引擎 =================
+        const DB_NAME = 'QuantJournalDB_v24';
         const STORE_NAME = 'trades';
-        const STORAGE_KEY = 'crypto_trading_journal_v22_fallback';
-        const SETTINGS_KEY = 'crypto_settings_v22';
+        const STORAGE_KEY = 'crypto_trading_journal_v24_fallback';
+        const SETTINGS_KEY = 'crypto_settings_v24';
 
         const StorageEngine = {
             useIDB: false,
@@ -548,55 +941,36 @@
                             resolve(); 
                         };
                         req.onerror = e => {
-                            console.warn("IndexedDB 被浏览器拦截，降级为基础存储");
+                            console.warn("IndexedDB 被拦截，降级为基础存储");
                             this.useIDB = false;
                             resolve();
                         };
-                    } catch(e) {
-                        this.useIDB = false;
-                        resolve();
-                    }
+                    } catch(e) { this.useIDB = false; resolve(); }
                 });
             },
             getAll: function() {
                 return new Promise((resolve) => {
                     let fallbackData =[];
                     try { fallbackData = JSON.parse(localStorage.getItem(STORAGE_KEY)) ||[]; } catch(e) {}
-                    
-                    if (!this.useIDB || !this.db) { 
-                        // IDB 不可用，仅返回备用存储数据
-                        resolve(fallbackData.sort((a,b)=>b.id - a.id)); 
-                        return; 
-                    }
+                    if (!this.useIDB || !this.db) { resolve(fallbackData.sort((a,b)=>b.id - a.id)); return; }
                     
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readonly');
                         const req = tx.objectStore(STORE_NAME).getAll();
-                        
                         req.onsuccess = () => {
                             let result = req.result ||[];
-                            
-                            // 【核心修复点】: 发现 LocalStorage 遗留数据，强行迁入 IDB 并清除 LocalStorage
                             if (fallbackData.length > 0) {
-                                console.log("检测到 LocalStorage 旧数据，正在平滑迁移至 IndexedDB...");
-                                
                                 const merged =[...result, ...fallbackData];
                                 const uniqueMap = new Map();
                                 merged.forEach(t => uniqueMap.set(t.id, t));
                                 result = Array.from(uniqueMap.values());
-                                
                                 try {
                                     const writeTx = this.db.transaction(STORE_NAME, 'readwrite');
                                     const store = writeTx.objectStore(STORE_NAME);
                                     result.forEach(t => store.put(t));
-                                    writeTx.oncomplete = () => {
-                                        // 迁移完成，彻底铲除幽灵数据，释放 5MB 空间
-                                        localStorage.removeItem(STORAGE_KEY);
-                                        console.log("数据迁移完成，LocalStorage 内存已彻底释放！");
-                                    };
-                                } catch(e) { console.warn("迁移写入 IDB 失败", e); }
+                                    writeTx.oncomplete = () => { localStorage.removeItem(STORAGE_KEY); };
+                                } catch(e) {}
                             }
-                            
                             resolve(result.sort((a,b)=>b.id - a.id));
                         };
                         req.onerror = () => resolve(fallbackData.sort((a,b)=>b.id - a.id));
@@ -604,58 +978,31 @@
                 });
             },
             saveAllToFallback: function(dataArray) {
-                try {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataArray));
-                } catch(e) {
-                    throw new Error("由于当前是本地运行 (file:///)，浏览器底层数据库连接异常断开！\n\n同时，备用存储空间也已满 (超过5MB限制)。\n\n解决办法：\n1. 将此文件部署到 GitHub Pages (强烈推荐)\n2. 减少上传的高清图片数量");
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dataArray)); } catch(e) {
+                    throw new Error("由于当前是本地运行 (file:///) 或超过存储上限，记录保存失败！");
                 }
             },
             put: function(trade, allTradesMemory) {
                 return new Promise((resolve, reject) => {
-                    if (!this.useIDB || !this.db) {
-                        try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(e) { reject(e); }
-                        return;
-                    }
+                    if (!this.useIDB || !this.db) { try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(e) { reject(e); } return; }
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).put(trade);
-                        tx.oncomplete = () => {
-                            // 防御性操作：避免 localStorage 内存留脏数据
-                            localStorage.removeItem(STORAGE_KEY);
-                            resolve();
-                        };
-                        tx.onerror = () => { 
-                            this.useIDB = false; 
-                            try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); }
-                        };
-                    } catch(e) { 
-                        this.useIDB = false; 
-                        try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); } 
-                    }
+                        tx.oncomplete = () => { localStorage.removeItem(STORAGE_KEY); resolve(); };
+                        tx.onerror = () => { this.useIDB = false; try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); } };
+                    } catch(e) { this.useIDB = false; try { this.saveAllToFallback(allTradesMemory); resolve(); } catch(err) { reject(err); } }
                 });
             },
             putAll: function(dataArray) {
                 return new Promise((resolve, reject) => {
-                    if (!this.useIDB || !this.db) {
-                        try { this.saveAllToFallback(dataArray); resolve(); } catch(e) { reject(e); }
-                        return;
-                    }
+                    if (!this.useIDB || !this.db) { try { this.saveAllToFallback(dataArray); resolve(); } catch(e) { reject(e); } return; }
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         const store = tx.objectStore(STORE_NAME);
                         dataArray.forEach(t => store.put(t));
-                        tx.oncomplete = () => {
-                            localStorage.removeItem(STORAGE_KEY);
-                            resolve();
-                        };
-                        tx.onerror = () => {
-                            this.useIDB = false;
-                            try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); }
-                        };
-                    } catch(e) { 
-                        this.useIDB = false;
-                        try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); }
-                    }
+                        tx.oncomplete = () => { localStorage.removeItem(STORAGE_KEY); resolve(); };
+                        tx.onerror = () => { this.useIDB = false; try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); } };
+                    } catch(e) { this.useIDB = false; try { this.saveAllToFallback(dataArray); resolve(); } catch(err) { reject(err); } }
                 });
             },
             delete: function(id, allTradesMemory) {
@@ -664,21 +1011,9 @@
                     try {
                         const tx = this.db.transaction(STORE_NAME, 'readwrite');
                         tx.objectStore(STORE_NAME).delete(id);
-                        tx.oncomplete = () => {
-                            // 防御性操作：防止删除后从 LS 幽灵复活
-                            localStorage.removeItem(STORAGE_KEY);
-                            resolve();
-                        };
-                        tx.onerror = () => {
-                            this.useIDB = false;
-                            try { this.saveAllToFallback(allTradesMemory); } catch(e){}
-                            resolve();
-                        };
-                    } catch(e) { 
-                        this.useIDB = false;
-                        try { this.saveAllToFallback(allTradesMemory); } catch(e){}
-                        resolve(); 
-                    }
+                        tx.oncomplete = () => { localStorage.removeItem(STORAGE_KEY); resolve(); };
+                        tx.onerror = () => { this.useIDB = false; try { this.saveAllToFallback(allTradesMemory); } catch(e){} resolve(); };
+                    } catch(e) { this.useIDB = false; try { this.saveAllToFallback(allTradesMemory); } catch(e){} resolve(); }
                 });
             },
             clear: function() {
@@ -696,13 +1031,16 @@
         };
 
         let settings = {};
-        try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) { console.warn("LocalStorage 禁止访问"); }
+        try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) {}
         
+        settings.aiProtocol = settings.aiProtocol || "gemini";
+        settings.aiBaseUrl = settings.aiBaseUrl || "https://api.openai.com/v1";
+        settings.aiApiKey = settings.aiApiKey || settings.geminiApiKey || "";
+        settings.aiModelName = settings.aiModelName || settings.geminiModelName || "gemini-1.5-flash";
+
         settings.dashboard = settings.dashboard || { maxDrawdown: true, sharpe: true, expectancy: true, streaks: true };
         settings.tableCols = settings.tableCols || { exchange: true, strategy: true, tags: true, margin: true, entryExit: true, fee: true, gross: true, duration: true };
-        if (!settings.exchanges) {
-            settings.exchanges = `Binance | 0.04 | 20\nOKX | 0.05 | 0\nBybit | 0.055 | 0`;
-        }
+        if (!settings.exchanges) settings.exchanges = `Binance | 0.04 | 20\nOKX | 0.05 | 0\nBybit | 0.055 | 0\nWeex | 0.05 | 0`;
         settings.tickers = settings.tickers || "BTC/USDT, ETH/USDT, SOL/USDT";
         settings.strategies = settings.strategies || "Lorentzian Classification, MACD, SuperTrend, Price Action, 其他";
         settings.tagsPresets = settings.tagsPresets || "FOMO, 左侧摸底, 右侧突破, 疲劳交易";
@@ -712,9 +1050,14 @@
         let filterPnlChartInstance = null; 
         let filterChartOpen = false;       
         let currentCalDate = new Date(); 
+        
         let pendingImages =[]; 
         let editingTradeId = null;
         let currentViewMode = 'table'; 
+
+        let currentCalViewMode = 'calendar';
+        let dailyBarChartInstance = null;
+        let barPeriodDays = 30;
 
         function safeJSONParse(str) {
             try { return JSON.parse(str); }
@@ -736,19 +1079,15 @@
 
         function migrateLegacyData(dataArray) {
             return dataArray.map(t => {
-                if ('image' in t) { t.images = (t.image && typeof t.image === 'string') ? [t.image] :[]; delete t.image; }
+                if ('image' in t) { t.images = (t.image && typeof t.image === 'string') ?[t.image] :[]; delete t.image; }
                 if (!Array.isArray(t.images)) t.images =[];
                 t.tags = t.tags || ''; t.entryTime = t.entryTime || ''; t.exitTime = t.exitTime || '';
                 t.date = t.date || '2023-01-01'; t.exchange = t.exchange || ''; t.ticker = t.ticker || '-';
                 t.strategy = t.strategy || ''; t.direction = t.direction || 'long'; t.pnlType = t.pnlType || 'BE'; t.notes = t.notes || '-';
-                
                 t.margin = parseFloat(t.margin) || 0; t.leverage = parseFloat(t.leverage) || 0; t.actualEntry = parseFloat(t.actualEntry) || 0;
                 t.exitPrice = parseFloat(t.exitPrice) || 0; t.fee = parseFloat(t.fee) || 0; t.rebate = parseFloat(t.rebate) || 0;
                 t.fundingFee = parseFloat(t.fundingFee) || 0; t.grossPnl = parseFloat(t.grossPnl) || 0; t.netPnl = parseFloat(t.netPnl) || 0;
-                
-                if (!t.id || isNaN(Number(t.id))) t.id = Date.now() + Math.floor(Math.random()*1000);
-                else t.id = Number(t.id);
-
+                if (!t.id || isNaN(Number(t.id))) t.id = Date.now() + Math.floor(Math.random()*1000); else t.id = Number(t.id);
                 return t;
             });
         }
@@ -789,7 +1128,6 @@
                 const pnl = t.netPnl;
                 currentCumulative += pnl;
                 returns.push(pnl);
-
                 if (pnl > 0) { 
                     wins++; totalWinNet += pnl; currentWinS++; currentLossS = 0;
                     if(currentWinS > maxWinS) maxWinS = currentWinS;
@@ -797,7 +1135,6 @@
                     loss++; totalLossNet += Math.abs(pnl); currentLossS++; currentWinS = 0;
                     if(currentLossS > maxLossS) maxLossS = currentLossS;
                 }
-
                 if (currentCumulative > peak) peak = currentCumulative;
                 const drawdown = peak - currentCumulative;
                 if (drawdown > maxDrawdown) maxDrawdown = drawdown;
@@ -820,19 +1157,42 @@
             return { total, winRate, wlRatio, profitFactor, totalNetPnl: currentCumulative, maxDrawdown: maxDrawdown.toFixed(2), sharpe, expectancy, maxWinStreak: maxWinS, maxLossStreak: maxLossS };
         }
 
-        function calcDurationText(startStr, endStr) {
-            if(!startStr || !endStr) return '-';
-            const s = new Date(startStr).getTime();
-            const e = new Date(endStr).getTime();
+        function calcDurationText(startStr, endStr, plainText = false) {
+            if(!startStr || !endStr || startStr === '-' || endStr === '-') return '-';
+            
+            const safeStart = startStr.replace(/-/g, '/').replace('T', ' ');
+            const safeEnd = endStr.replace(/-/g, '/').replace('T', ' ');
+            
+            const s = new Date(safeStart).getTime();
+            const e = new Date(safeEnd).getTime();
             if(isNaN(s) || isNaN(e) || e < s) return '-';
             const diffMin = Math.floor((e - s) / 60000);
-            if (diffMin < 60) return `${diffMin}分钟`;
-            const hours = Math.floor(diffMin / 60);
-            const mins = diffMin % 60;
-            if (hours < 24) return `${hours}小时 ${mins}分`;
-            const days = Math.floor(hours / 24);
-            const remainH = hours % 24;
-            return `${days}天 ${remainH}小时`;
+            
+            let label = "";
+            if (diffMin <= 60) label = "超短线";
+            else if (diffMin <= 24 * 60) label = "短线";
+            else if (diffMin <= 7 * 24 * 60) label = "中线";
+            else if (diffMin <= 30 * 24 * 60) label = "中长线";
+            else label = "长线";
+
+            let timeStr = "";
+            if (diffMin < 60) timeStr = `${diffMin}分钟`;
+            else {
+                const hours = Math.floor(diffMin / 60);
+                const mins = diffMin % 60;
+                if (hours < 24) timeStr = `${hours}小时${mins}分`;
+                else {
+                    const days = Math.floor(hours / 24);
+                    const remainH = hours % 24;
+                    timeStr = `${days}天${remainH}小时`;
+                }
+            }
+            
+            if (plainText) {
+                return `${label} (${timeStr})`;
+            } else {
+                return `<span class="font-bold text-blue-600 dark:text-blue-400">${label}</span><br/><span class="text-[10px] text-gray-400 dark:text-gray-500">${timeStr}</span>`;
+            }
         }
 
         let dashboardCollapsed = false;
@@ -911,32 +1271,72 @@
                 const opt = document.createElement('option'); opt.value = t.toUpperCase(); tickerList.appendChild(opt);
             });
 
-            const strategySelect = document.getElementById('strategy');
-            const currentSelectedStrat = strategySelect.value;
-            strategySelect.innerHTML = '';
-            const sArr = settings.strategies.split(',').map(s => s.trim()).filter(Boolean);
-            sArr.forEach(s => {
-                const opt = document.createElement('option'); opt.value = s; opt.innerText = s; strategySelect.appendChild(opt);
-            });
-            if(sArr.includes(currentSelectedStrat)) { strategySelect.value = currentSelectedStrat; }
-
-            const exchangeFormSelect = document.getElementById('exchange');
-            const currentSelectedEx = exchangeFormSelect.value;
-            exchangeFormSelect.innerHTML = '';
-            const exArr = getExchangesConfig();
-            exArr.forEach(e => {
-                const opt = document.createElement('option'); opt.value = e.name; opt.innerText = e.name; exchangeFormSelect.appendChild(opt);
-            });
-            if(exArr.map(e=>e.name).includes(currentSelectedEx)) { exchangeFormSelect.value = currentSelectedEx; }
-
             const tagsList = document.getElementById('tags-list');
             tagsList.innerHTML = '';
             settings.tagsPresets.split(',').map(s => s.trim()).filter(Boolean).forEach(t => {
                 const opt = document.createElement('option'); opt.value = t; tagsList.appendChild(opt);
             });
+
+            const sArr = settings.strategies.split(',').map(s => s.trim()).filter(Boolean);
+            const allStrategies = new Set([...sArr, ...trades.map(t=>t.strategy)]);
+            const exArr = getExchangesConfig();
+            const allExchanges = new Set([...exArr.map(e=>e.name), ...trades.map(t=>t.exchange)]);
+            const allTickers = new Set([
+                ...settings.tickers.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean), 
+                ...trades.map(t=>t.ticker)
+            ]);
+
+            const strategySelect = document.getElementById('strategy');
+            const currentSelectedStrat = localStorage.getItem('lastStrategy') || strategySelect.value;
+            strategySelect.innerHTML = '';
+            Array.from(allStrategies).filter(Boolean).forEach(s => {
+                const opt = document.createElement('option'); opt.value = s; opt.innerText = s; strategySelect.appendChild(opt);
+            });
+            if(Array.from(allStrategies).includes(currentSelectedStrat)) { strategySelect.value = currentSelectedStrat; }
+
+            const exchangeFormSelect = document.getElementById('exchange');
+            const currentSelectedEx = localStorage.getItem('lastExchange') || exchangeFormSelect.value;
+            exchangeFormSelect.innerHTML = '';
+            Array.from(allExchanges).filter(Boolean).forEach(e => {
+                const opt = document.createElement('option'); opt.value = e; opt.innerText = e; exchangeFormSelect.appendChild(opt);
+            });
+            if(Array.from(allExchanges).includes(currentSelectedEx)) { exchangeFormSelect.value = currentSelectedEx; }
+
+            const pnlModeSelect = document.getElementById('targetPnlMode');
+            const lastPnlMode = localStorage.getItem('lastTargetPnlMode') || 'gross';
+            pnlModeSelect.value = lastPnlMode;
+
+            const filterExchange = document.getElementById('filter-exchange');
+            const fExVal = filterExchange.value;
+            filterExchange.innerHTML = '<option value="">全部交易所</option>';
+            Array.from(allExchanges).filter(Boolean).forEach(e => {
+                const opt = document.createElement('option'); opt.value = e; opt.innerText = e; filterExchange.appendChild(opt);
+            });
+            if(Array.from(allExchanges).includes(fExVal)) filterExchange.value = fExVal;
+
+            const filterTicker = document.getElementById('filter-ticker');
+            const fTkVal = filterTicker.value;
+            filterTicker.innerHTML = '<option value="">全部标的</option>';
+            Array.from(allTickers).filter(Boolean).forEach(t => {
+                const opt = document.createElement('option'); opt.value = t; opt.innerText = t; filterTicker.appendChild(opt);
+            });
+            filterTicker.value = fTkVal;
+
+            const filterStrategy = document.getElementById('filter-strategy');
+            const fStVal = filterStrategy.value;
+            filterStrategy.innerHTML = '<option value="">全部策略</option>';
+            Array.from(allStrategies).filter(Boolean).forEach(s => {
+                const opt = document.createElement('option'); opt.value = s; opt.innerText = s; filterStrategy.appendChild(opt);
+            });
+            filterStrategy.value = fStVal;
         }
 
         window.openSettings = function() {
+            document.getElementById('cfg-ai-protocol').value = settings.aiProtocol || "gemini";
+            document.getElementById('cfg-ai-baseurl').value = settings.aiBaseUrl || "https://api.openai.com/v1";
+            document.getElementById('cfg-ai-key').value = settings.aiApiKey || "";
+            document.getElementById('cfg-ai-model').value = settings.aiModelName || "gemini-1.5-flash";
+
             document.getElementById('set-exchanges').value = settings.exchanges;
             document.getElementById('set-tickers').value = settings.tickers;
             document.getElementById('set-strategies').value = settings.strategies;
@@ -963,6 +1363,11 @@
             document.getElementById('settings-modal').classList.add('hidden');
         }
         window.saveSettings = function() {
+            settings.aiProtocol = document.getElementById('cfg-ai-protocol').value;
+            settings.aiBaseUrl = document.getElementById('cfg-ai-baseurl').value.trim();
+            settings.aiApiKey = document.getElementById('cfg-ai-key').value.trim();
+            settings.aiModelName = document.getElementById('cfg-ai-model').value.trim();
+
             settings.exchanges = document.getElementById('set-exchanges').value;
             settings.tickers = document.getElementById('set-tickers').value;
             settings.strategies = document.getElementById('set-strategies').value;
@@ -992,7 +1397,8 @@
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = e => {
-                    const img = new Image(); img.src = e.target.result;
+                    const img = new Image(); 
+                    img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = img.width, height = img.height;
@@ -1001,7 +1407,7 @@
                         else { if (height > MAX) { width *= MAX / height; height = MAX; } }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                        canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
                     };
                 };
                 reader.readAsDataURL(file);
@@ -1012,8 +1418,8 @@
             for(let i=0; i<files.length; i++) {
                 const file = files[i];
                 if(!file.type.startsWith('image/')) continue;
-                const dataUrl = await compressImage(file);
-                pendingImages.push(dataUrl);
+                const blob = await compressImage(file);
+                pendingImages.push({ blob: blob, url: URL.createObjectURL(blob) });
             }
             renderImagePreviews();
         }
@@ -1026,6 +1432,7 @@
         }
 
         window.removeImage = function(index) {
+            if(typeof pendingImages[index].blob !== 'string') URL.revokeObjectURL(pendingImages[index].url);
             pendingImages.splice(index, 1);
             renderImagePreviews();
         }
@@ -1035,11 +1442,11 @@
             container.innerHTML = '';
             if (pendingImages.length === 0) { container.classList.add('hidden'); return; }
             container.classList.remove('hidden');
-            pendingImages.forEach((src, index) => {
+            pendingImages.forEach((item, index) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'relative w-20 h-20 rounded border bg-gray-100 flex-shrink-0';
                 wrapper.innerHTML = `
-                    <img src="${src}" class="w-full h-full object-cover rounded cursor-zoom-in hover:opacity-80 transition" onclick="viewImageFromUrl('${src}')">
+                    <img src="${item.url}" class="w-full h-full object-cover rounded cursor-zoom-in hover:opacity-80 transition" onclick="viewImageFromUrl('${item.url}')">
                     <button type="button" onclick="removeImage(${index})" class="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-rose-600 transition-colors">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -1072,22 +1479,29 @@
             } else {
                 container.classList.add('hidden');
                 icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
-                text.innerText = '展开高级选项 (目标净利润/进出场时间/情绪标签)';
+                text.innerText = '展开高级选项 (目标利润反推/进出场时间/情绪标签)';
             }
         }
 
-        function autoDetectDirection() {
+        function autoDetectDirection(forceUpdate = true) {
             const entry = parseFloat(document.getElementById('actualEntry').value);
             const exit = parseFloat(document.getElementById('exitPrice').value);
-            if (!isNaN(entry) && !isNaN(exit) && entry > 0) {
+            const pnl = parseFloat(document.getElementById('targetNetPnl').value);
+            
+            if (forceUpdate && !isNaN(entry) && !isNaN(exit) && entry > 0 && !isNaN(pnl)) {
                 const dirSelect = document.getElementById('direction');
-                if (exit > entry) dirSelect.value = 'long'; else if (exit < entry) dirSelect.value = 'short';
+                if (pnl > 0) { 
+                    dirSelect.value = (exit > entry) ? 'long' : 'short';
+                } else if (pnl < 0) { 
+                    dirSelect.value = (exit > entry) ? 'short' : 'long';
+                }
             }
             onDependencyChange();
         }
 
         function calcMarginFromTarget() {
             const targetPnl = parseFloat(document.getElementById('targetNetPnl').value);
+            const mode = document.getElementById('targetPnlMode').value;
             const direction = document.getElementById('direction').value;
             const leverage = parseFloat(document.getElementById('leverage').value);
             const actualEntry = parseFloat(document.getElementById('actualEntry').value);
@@ -1098,10 +1512,21 @@
 
             const exData = getExchangesConfig().find(e => e.name === exchangeName) || getExchangesConfig()[0];
             let priceRatio = direction === 'long' ? (exitPrice - actualEntry) / actualEntry : (actualEntry - exitPrice) / actualEntry;
-            const denominator = priceRatio - (exData.feeRate / 100 * 2 * (1 - exData.rebateRate / 100));
+            
+            let denominator;
+            let targetAdjusted;
+            
+            if (mode === 'net') {
+                denominator = priceRatio - (exData.feeRate / 100 * 2 * (1 - exData.rebateRate / 100));
+                targetAdjusted = targetPnl + fundingFee;
+            } else {
+                denominator = priceRatio;
+                targetAdjusted = targetPnl;
+            }
+            
             if (denominator === 0) return; 
             
-            let margin = Math.abs((targetPnl + fundingFee) / denominator / leverage);
+            let margin = Math.abs(targetAdjusted / denominator / leverage);
             document.getElementById('margin').value = margin.toFixed(2);
             autoUpdatePnlType(margin); 
         }
@@ -1118,8 +1543,9 @@
             if (margin > 0 && leverage > 0 && actualEntry > 0 && exitPrice > 0) {
                 const { netPnl } = calculateTradeData(exchangeName, direction, margin, leverage, actualEntry, exitPrice, fundingFee);
                 const pnlTypeSelect = document.getElementById('pnlType');
-                if (netPnl >= margin * 0.1) { pnlTypeSelect.value = 'TP'; } 
-                else if (netPnl <= -margin * 0.1) { pnlTypeSelect.value = 'SL'; } 
+                
+                if (netPnl > 0) { pnlTypeSelect.value = 'TP'; } 
+                else if (netPnl < 0) { pnlTypeSelect.value = 'SL'; } 
                 else { pnlTypeSelect.value = 'BE'; }
             }
         }
@@ -1127,6 +1553,7 @@
         function onDependencyChange() {
             if (document.getElementById('targetNetPnl').value !== '') calcMarginFromTarget(); else autoUpdatePnlType();
         }
+        
         function onMarginManualInput() { document.getElementById('targetNetPnl').value = ''; autoUpdatePnlType(); }
 
         window.editTrade = function(id) {
@@ -1134,9 +1561,34 @@
             const t = trades.find(item => item.id === id);
             if(!t) return;
             editingTradeId = id;
+            
+            if (t.exchange && !Array.from(document.getElementById('exchange').options).map(o=>o.value).includes(t.exchange)) {
+                const opt = document.createElement('option'); opt.value = t.exchange; opt.innerText = t.exchange; document.getElementById('exchange').appendChild(opt);
+            }
+            if (t.strategy && !Array.from(document.getElementById('strategy').options).map(o=>o.value).includes(t.strategy)) {
+                const opt = document.createElement('option'); opt.value = t.strategy; opt.innerText = t.strategy; document.getElementById('strategy').appendChild(opt);
+            }
+
             document.getElementById('date').value = t.date;
-            document.getElementById('entryTime').value = t.entryTime || '';
-            document.getElementById('exitTime').value = t.exitTime || '';
+            
+            if (t.entryTime) {
+                let parts = t.entryTime.replace('T', ' ').trim().split(' ');
+                document.getElementById('entryDate').value = parts[0] || '';
+                document.getElementById('entryTime').value = parts[1] ? parts[1].substring(0, 5) : '';
+            } else {
+                document.getElementById('entryDate').value = '';
+                document.getElementById('entryTime').value = '';
+            }
+
+            if (t.exitTime) {
+                let parts = t.exitTime.replace('T', ' ').trim().split(' ');
+                document.getElementById('exitDate').value = parts[0] || '';
+                document.getElementById('exitTime').value = parts[1] ? parts[1].substring(0, 5) : '';
+            } else {
+                document.getElementById('exitDate').value = '';
+                document.getElementById('exitTime').value = '';
+            }
+
             document.getElementById('tags').value = t.tags || '';
             document.getElementById('exchange').value = t.exchange || getExchangesConfig()[0].name; 
             document.getElementById('ticker').value = t.ticker;
@@ -1151,13 +1603,20 @@
             document.getElementById('notes').value = t.notes && t.notes !== '-' ? t.notes : '';
             document.getElementById('targetNetPnl').value = ''; 
             document.getElementById('notes').rows = Math.max(6, document.getElementById('notes').value.split('\n').length);
-            pendingImages = [...(t.images || [])]; renderImagePreviews();
             
-            if ((t.entryTime || t.exitTime || t.tags) && !optionalFieldsOpen) {
-                toggleOptionalFields();
+            if (pendingImages.length > 0) {
+                pendingImages.forEach(p => { if(typeof p.blob !== 'string') URL.revokeObjectURL(p.url); });
             }
+            pendingImages = (t.images ||[]).map(img => {
+                if (typeof img === 'string') return { blob: img, url: img }; 
+                return { blob: img, url: URL.createObjectURL(img) };
+            });
+            renderImagePreviews();
+            
+            if ((t.entryTime || t.exitTime || t.tags) && !optionalFieldsOpen) toggleOptionalFields();
 
-            document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen mr-2 text-blue-500"></i>编辑历史记录';
+            document.getElementById('form-title-icon').className = 'fa-solid fa-pen mr-2 text-blue-500';
+            document.getElementById('form-title-text').innerText = '编辑历史记录';
             document.getElementById('form-section').classList.add('ring-2', 'ring-blue-400', 'shadow-lg');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
             document.getElementById('text-submit').innerText = '更新记录';
@@ -1168,13 +1627,34 @@
         window.cancelEdit = function() {
             editingTradeId = null; 
             document.getElementById('trade-form').reset();
-            document.getElementById('date').valueAsDate = new Date();
-            document.getElementById('exchange').value = getExchangesConfig()[0].name;
-            pendingImages =[]; renderImagePreviews(); document.getElementById('notes').rows = 2;
+            document.getElementById('date').value = getLocalDateString();
             
+            let lastEx = localStorage.getItem('lastExchange');
+            let lastSt = localStorage.getItem('lastStrategy');
+            let lastPnlMode = localStorage.getItem('lastTargetPnlMode') || 'gross';
+            
+            if(lastEx && Array.from(document.getElementById('exchange').options).map(o=>o.value).includes(lastEx)) {
+                document.getElementById('exchange').value = lastEx;
+            } else {
+                document.getElementById('exchange').value = getExchangesConfig()[0].name;
+            }
+            if(lastSt && Array.from(document.getElementById('strategy').options).map(o=>o.value).includes(lastSt)) {
+                document.getElementById('strategy').value = lastSt;
+            }
+            document.getElementById('targetPnlMode').value = lastPnlMode;
+            
+            document.getElementById('entryDate').value = '';
+            document.getElementById('entryTime').value = '';
+            document.getElementById('exitDate').value = '';
+            document.getElementById('exitTime').value = '';
+
+            pendingImages.forEach(p => { if (typeof p.blob !== 'string') URL.revokeObjectURL(p.url); });
+            pendingImages =[]; renderImagePreviews(); 
+            document.getElementById('notes').rows = 2;
             if (optionalFieldsOpen) toggleOptionalFields(); 
 
-            document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2 text-emerald-500"></i>录入新交易';
+            document.getElementById('form-title-icon').className = 'fa-solid fa-pen-to-square mr-2 text-emerald-500';
+            document.getElementById('form-title-text').innerText = '录入新交易';
             document.getElementById('form-section').classList.remove('ring-2', 'ring-blue-400', 'shadow-lg');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
             document.getElementById('text-submit').innerText = '保存记录';
@@ -1182,9 +1662,10 @@
         }
 
         function attachEvents() {
-            document.getElementById('actualEntry').addEventListener('input', autoDetectDirection);
-            document.getElementById('exitPrice').addEventListener('input', autoDetectDirection);['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
+            document.getElementById('actualEntry').addEventListener('input', () => autoDetectDirection(true));
+            document.getElementById('exitPrice').addEventListener('input', () => autoDetectDirection(true));['leverage', 'fundingFee', 'direction', 'exchange'].forEach(id => { document.getElementById(id).addEventListener('input', onDependencyChange); });
             document.getElementById('targetNetPnl').addEventListener('input', calcMarginFromTarget);
+            document.getElementById('targetPnlMode').addEventListener('change', calcMarginFromTarget);
             document.getElementById('margin').addEventListener('input', onMarginManualInput);
 
             document.getElementById('tags').addEventListener('keydown', function(e) {
@@ -1212,6 +1693,7 @@
             notesEl.addEventListener('focus', function() { this.rows = Math.max(6, this.value.split('\n').length); });
             notesEl.addEventListener('blur', function() { if(!this.value.trim()) this.rows = 2; });
             notesEl.addEventListener('input', function() { this.rows = Math.max(6, this.value.split('\n').length); });
+            
             notesEl.addEventListener('paste', async (e) => {
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items; const files =[];
                 for (let i in items) { if (items[i].kind === 'file' && items[i].type.startsWith('image/')) files.push(items[i].getAsFile()); }
@@ -1236,6 +1718,14 @@
                     const inputTicker = document.getElementById('ticker').value.toUpperCase();
                     const inputStrategy = document.getElementById('strategy').value;
                     
+                    const ed = document.getElementById('entryDate').value;
+                    const et = document.getElementById('entryTime').value;
+                    const entryTimeVal = (ed && et) ? `${ed} ${et}` : (ed || '');
+                    
+                    const xd = document.getElementById('exitDate').value;
+                    const xt = document.getElementById('exitTime').value;
+                    const exitTimeVal = (xd && xt) ? `${xd} ${xt}` : (xd || '');
+                    
                     let inputTagsRaw = document.getElementById('tags').value;
                     let inputTagsArr = inputTagsRaw.split(',').map(s=>s.trim()).filter(Boolean);
                     let currentTags = settings.tagsPresets.split(',').map(s=>s.trim()).filter(Boolean);
@@ -1250,14 +1740,13 @@
                     if(changed) {
                         settings.tagsPresets = currentTags.join(', ');
                         try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){}
-                        updateFormPresets();
                     }
 
                     const newTrade = {
                         id: editingTradeId ? Number(editingTradeId) : Date.now(), 
                         date: document.getElementById('date').value,
-                        entryTime: document.getElementById('entryTime').value,
-                        exitTime: document.getElementById('exitTime').value,
+                        entryTime: entryTimeVal,
+                        exitTime: exitTimeVal,
                         tags: inputTagsRaw,
                         exchange: exchange,
                         ticker: inputTicker,
@@ -1270,7 +1759,7 @@
                         pnlType: document.getElementById('pnlType').value,
                         fundingFee: fundingFee,
                         notes: document.getElementById('notes').value || '-',
-                        images: [...pendingImages], 
+                        images: pendingImages.map(p => p.blob), 
                         fee: fee,
                         rebate: rebate,
                         grossPnl: grossPnl,
@@ -1285,14 +1774,27 @@
                     }
 
                     await StorageEngine.put(newTrade, trades);
+                    updateFormPresets(); 
                     
+                    localStorage.setItem('lastExchange', exchange);
+                    localStorage.setItem('lastStrategy', inputStrategy);
+                    localStorage.setItem('lastTargetPnlMode', document.getElementById('targetPnlMode').value);
+
                     if (editingTradeId) {
                         cancelEdit();
                     } else {
                         document.getElementById('trade-form').reset();
-                        document.getElementById('date').valueAsDate = new Date();
+                        document.getElementById('date').value = getLocalDateString();
                         document.getElementById('exchange').value = exchange;
                         document.getElementById('strategy').value = inputStrategy;
+                        document.getElementById('targetPnlMode').value = localStorage.getItem('lastTargetPnlMode') || 'gross';
+                        
+                        document.getElementById('entryDate').value = '';
+                        document.getElementById('entryTime').value = '';
+                        document.getElementById('exitDate').value = '';
+                        document.getElementById('exitTime').value = '';
+                        
+                        pendingImages.forEach(p => { if (typeof p.blob !== 'string') URL.revokeObjectURL(p.url); });
                         pendingImages =[];
                         renderImagePreviews();
                         document.getElementById('notes').rows = 2;
@@ -1309,7 +1811,6 @@
                         trades.shift(); 
                     }
                     alert("数据保存失败！\n原因：" + err.message);
-                    console.error("Save Error:", err);
                 }
             });
         }
@@ -1317,16 +1818,14 @@
         window.onload = async () => {
             await StorageEngine.init();
             trades = await StorageEngine.getAll();
-            try { attachEvents(); } catch(e) { console.error("Event Binding Error", e); }
+            try { attachEvents(); } catch(e) {}
             try {
-                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('date').value = getLocalDateString();
                 updateFormPresets();
                 const engineName = StorageEngine.useIDB ? 'IndexedDB' : 'LocalStorage (降级)';
-                document.getElementById('status-indicator').innerHTML = `<i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i>V22 全局安全防御已启动，本地数据库运作正常 (当前引擎: ${engineName})`;
+                document.getElementById('status-indicator').innerHTML = `<i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i>V26.4 智能引擎启动完毕 (存储: ${engineName})`;
                 renderApp();
-            } catch(e) {
-                console.error("UI Rendering Error", e);
-            }
+            } catch(e) { console.error("UI Rendering Error", e); }
         };
 
         window.switchViewMode = function(mode) {
@@ -1340,18 +1839,11 @@
             const activeClass = "px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm transition-all";
             const inactiveClass = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
             
-            if (mode === 'table') {
-                btnTable.className = activeClass;
-                btnNotes.className = inactiveClass;
-            } else {
-                btnNotes.className = activeClass;
-                btnTable.className = inactiveClass;
-            }
+            if (mode === 'table') { btnTable.className = activeClass; btnNotes.className = inactiveClass; } 
+            else { btnNotes.className = activeClass; btnTable.className = inactiveClass; }
             
             if (mode === 'notes') {
-                setTimeout(() => {
-                    document.getElementById('records-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 50);
+                setTimeout(() => { document.getElementById('records-section').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
             }
         }
 
@@ -1445,7 +1937,7 @@
                 options: { 
                     responsive: true, maintainAspectRatio: false, 
                     scales: { 
-                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v } }, 
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + Number(v).toFixed(2) } }, 
                         x: { 
                             display: true, grid: { display: false }, 
                             ticks: { 
@@ -1462,7 +1954,7 @@
                             } 
                         } 
                     }, 
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `筛选累计盈亏: $${c.parsed.y.toFixed(2)}` } } } 
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `筛选累计盈亏: $${Number(c.parsed.y).toFixed(2)}` } } } 
                 }
             });
         }
@@ -1472,6 +1964,8 @@
             const tbody = document.getElementById('table-body');
             const cols = settings.tableCols;
             
+            ObjectUrlManager.revokeAll(); 
+
             thead.innerHTML = `
                 <th class="px-4 py-3 font-medium">日期</th>
                 ${cols.exchange ? '<th class="px-4 py-3 font-medium">交易所</th>' : ''}
@@ -1490,9 +1984,13 @@
             `;
 
             tbody.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+
             if (filteredTrades.length === 0) { 
                 const colSpan = 5 + Object.values(cols).filter(v=>v).length;
-                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500">没有符合筛选条件的数据</td></tr>`; 
+                const emptyTr = document.createElement('tr');
+                emptyTr.innerHTML = `<td colspan="${colSpan}" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500">没有符合筛选条件的数据</td>`;
+                fragment.appendChild(emptyTr);
             } else {
                 filteredTrades.forEach(t => {
                     const cColor = t.netPnl > 0 ? 'text-emerald-500' : (t.netPnl < 0 ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400');
@@ -1506,27 +2004,28 @@
                     const imgCount = t.images ? t.images.length : 0;
                     const imgThumb = imgCount > 0 ? `<span class="inline-flex items-center text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[10px] mr-1 border border-blue-100 dark:border-blue-800" title="含 ${imgCount} 张图片"><i class="fa-solid fa-image mr-1"></i>${imgCount}</span>` : '';
 
-                    const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
+                    const tr = document.createElement('tr'); 
+                    tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
                     
                     tr.innerHTML = `
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${t.date}</td>
-                        ${cols.exchange ? `<td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">${t.exchange || '-'}</td>` : ''}
-                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${t.ticker}</td>
+                        ${cols.exchange ? `<td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">${escapeHTML(t.exchange) || '-'}</td>` : ''}
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${escapeHTML(t.ticker)}</td>
                         <td class="px-4 py-3">${dirBadge}</td>
-                        ${cols.strategy ? `<td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">${t.strategy || '-'}</td>` : ''}
-                        ${cols.tags ? `<td class="px-4 py-3"><span class="text-[10px] text-purple-500 block truncate max-w-[120px]">${t.tags ? `<i class="fa-solid fa-tags mr-1"></i>${t.tags}` : '-'}</span></td>` : ''}
+                        ${cols.strategy ? `<td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">${escapeHTML(t.strategy) || '-'}</td>` : ''}
+                        ${cols.tags ? `<td class="px-4 py-3"><span class="text-[10px] text-purple-500 block truncate max-w-[120px]">${t.tags ? `<i class="fa-solid fa-tags mr-1"></i>${escapeHTML(t.tags)}` : '-'}</span></td>` : ''}
                         ${cols.margin ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300">${t.margin} / ${t.leverage}x</td>` : ''}
                         ${cols.entryExit ? `<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-xs">${t.actualEntry}<br/><span class="text-gray-400 dark:text-gray-500">${t.exitPrice}</span></td>` : ''}
                         ${cols.fee ? `<td class="px-4 py-3 text-right text-xs"><span class="text-rose-400">-${t.fee.toFixed(2)}</span><br/><span class="text-emerald-400">+${t.rebate.toFixed(2)}</span></td>` : ''}
                         ${cols.gross ? `<td class="px-4 py-3 text-right ${cColor}">${t.grossPnl > 0 ? '+' : ''}${t.grossPnl.toFixed(2)}</td>` : ''}
                         <td class="px-4 py-3 text-right font-bold ${cColor}">${t.netPnl > 0 ? '+' : ''}${t.netPnl.toFixed(2)}</td>
                         <td class="px-4 py-3 text-center">${pnlTypeBadge}</td>
-                        ${cols.duration ? `<td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">${calcDurationText(t.entryTime, t.exitTime)}</td>` : ''}
+                        ${cols.duration ? `<td class="px-4 py-3 text-center text-xs">${calcDurationText(t.entryTime, t.exitTime, false)}</td>` : ''}
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end space-x-3">
                                 <div class="flex items-center cursor-pointer hover:text-blue-500 transition max-w-[120px]" onclick="openTradeDetail(${t.id})" title="点击查看详情">
                                     ${imgThumb}
-                                    <span class="truncate text-xs text-gray-500 dark:text-gray-400">${t.notes}</span>
+                                    <span class="truncate text-xs text-gray-500 dark:text-gray-400">${escapeHTML(t.notes)}</span>
                                 </div>
                                 <button onclick="editTrade(${t.id})" class="text-emerald-500 hover:text-emerald-400 transition" title="编辑"><i class="fa-solid fa-pen"></i></button>
                                 <button onclick="openTradeDetail(${t.id})" class="text-blue-400 hover:text-blue-300 transition" title="详情"><i class="fa-solid fa-eye"></i></button>
@@ -1534,10 +2033,13 @@
                             </div>
                         </td>
                     `;
-                    tbody.appendChild(tr);
+                    fragment.appendChild(tr);
                 });
             }
 
+            tbody.appendChild(fragment);
+
+            // 核心修复3：用 e.clientX 代替 e.pageX，修复因横向滚动造成的列宽调节错位问题
             const ths = thead.querySelectorAll('th');
             ths.forEach(th => {
                 th.classList.add('resizable');
@@ -1546,23 +2048,23 @@
                 th.appendChild(resizer);
                 
                 let startX, startWidth;
+                const onMouseMove = (e) => {
+                    const newWidth = Math.max(30, startWidth + (e.clientX - startX));
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+                    th.style.maxWidth = newWidth + 'px';
+                };
+                
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    resizer.classList.remove('active');
+                };
+
                 resizer.addEventListener('mousedown', function(e) {
-                    startX = e.pageX;
-                    startWidth = th.offsetWidth;
+                    startX = e.clientX;
+                    startWidth = th.getBoundingClientRect().width;
                     resizer.classList.add('active');
-                    
-                    function onMouseMove(e) {
-                        const newWidth = startWidth + (e.pageX - startX);
-                        th.style.width = newWidth + 'px';
-                        th.style.minWidth = newWidth + 'px';
-                        th.style.maxWidth = newWidth + 'px';
-                    }
-                    function onMouseUp() {
-                        document.removeEventListener('mousemove', onMouseMove);
-                        document.removeEventListener('mouseup', onMouseUp);
-                        resizer.classList.remove('active');
-                    }
-                    
                     document.addEventListener('mousemove', onMouseMove);
                     document.addEventListener('mouseup', onMouseUp);
                 });
@@ -1587,11 +2089,14 @@
                 let imgHtml = '';
                 if (t.images && t.images.length > 0) {
                     imgHtml = '<div class="flex flex-wrap gap-2 mt-3">';
-                    t.images.forEach(src => { imgHtml += `<img src="${src}" class="w-32 h-32 object-cover rounded border dark:border-gray-700 cursor-zoom-in hover:opacity-80" onclick="viewImageFromUrl('${src}')">`; });
+                    t.images.forEach(src => { 
+                        const safeUrl = ObjectUrlManager.create(src);
+                        imgHtml += `<img src="${safeUrl}" class="w-32 h-32 object-cover rounded border dark:border-gray-700 cursor-zoom-in hover:opacity-80" onclick="viewImageFromUrl('${safeUrl}')">`; 
+                    });
                     imgHtml += '</div>';
                 }
-                const tagHtml = t.tags ? `<span class="block mt-2 text-xs font-medium text-purple-500"><i class="fa-solid fa-tags mr-1"></i>${t.tags}</span>` : '';
-                const notesText = (t.notes && t.notes !== '-') ? t.notes : '<span class="text-gray-400 italic">仅包含附件或标签</span>';
+                const tagHtml = t.tags ? `<span class="block mt-2 text-xs font-medium text-purple-500"><i class="fa-solid fa-tags mr-1"></i>${escapeHTML(t.tags)}</span>` : '';
+                const notesText = (t.notes && t.notes !== '-') ? escapeHTML(t.notes) : '<span class="text-gray-400 italic">仅包含附件或标签</span>';
 
                 html += `
                     <div class="mb-8 ml-6">
@@ -1602,13 +2107,13 @@
                             <div class="flex flex-wrap justify-between items-start mb-3 gap-2">
                                 <div>
                                     <h3 class="flex items-center text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                        <span class="text-gray-400 dark:text-gray-500 font-normal mr-2 text-sm">${t.exchange || '-'}</span>${t.ticker}
+                                        <span class="text-gray-400 dark:text-gray-500 font-normal mr-2 text-sm">${escapeHTML(t.exchange) || '-'}</span>${escapeHTML(t.ticker)}
                                         <span class="border text-xs font-semibold px-2 py-0.5 rounded ml-3 ${dirColor}">${t.direction === 'long' ? '做多' : '做空'}</span>
                                         <span class="text-xs font-medium">${pnlTypeBadge}</span>
                                     </h3>
                                     <div class="text-xs text-gray-500 dark:text-gray-400 space-x-3">
                                         <span><i class="fa-regular fa-calendar mr-1"></i>${t.date}</span>
-                                        <span><i class="fa-solid fa-chess-knight mr-1"></i>${t.strategy || '-'}</span>
+                                        <span><i class="fa-solid fa-chess-knight mr-1"></i>${escapeHTML(t.strategy) || '-'}</span>
                                         <span><i class="fa-solid fa-wallet mr-1"></i>净盈亏: <span class="${cColor} font-bold">${t.netPnl > 0 ? '+' : ''}${t.netPnl.toFixed(2)}</span></span>
                                     </div>
                                 </div>
@@ -1633,6 +2138,28 @@
             updateFilteredView(); 
             renderChart();
             renderCalendar();
+            if(currentCalViewMode === 'bar') renderDailyBarChart();
+        };
+
+        window.setChartPeriod = function(days) {
+            let maxDate = new Date();
+            if (trades.length > 0) {
+                let maxTradeDateStr = trades[0].date;
+                trades.forEach(t => {
+                    if (t.date > maxTradeDateStr) maxTradeDateStr = t.date;
+                });
+                const tradeMaxDate = new Date(maxTradeDateStr);
+                if (tradeMaxDate > maxDate) maxDate = tradeMaxDate;
+            }
+            
+            const targetEndStr = maxDate.toISOString().split('T')[0];
+            const targetStart = new Date(maxDate);
+            targetStart.setDate(targetStart.getDate() - days + 1);
+            const targetStartStr = targetStart.toISOString().split('T')[0];
+
+            document.getElementById('chart-end').value = targetEndStr;
+            document.getElementById('chart-start').value = targetStartStr;
+            renderChart();
         };
 
         window.renderChart = function() {
@@ -1696,7 +2223,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v } },
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + Number(v).toFixed(2) } },
                         x: { 
                             grid: { display: false }, 
                             ticks: { 
@@ -1715,7 +2242,7 @@
                     },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: c => `累计盈亏: $${c.parsed.y.toFixed(2)}` } }
+                        tooltip: { callbacks: { label: c => `累计盈亏: $${Number(c.parsed.y).toFixed(2)}` } }
                     }
                 }
             });
@@ -1760,7 +2287,7 @@
                 dailyPnl[t.date].count += 1;
             });
 
-            const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
 
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -1776,11 +2303,12 @@
                     else bgClass = 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-300 shadow-sm';
                     
                     let displayPnl = formatCalNumber(Math.abs(data.sum));
+                    let sign = data.sum > 0 ? '+' : (data.sum < 0 ? '-' : '');
                     
                     innerHtml = `
                         <div class="flex flex-col items-center justify-center h-full w-full" onclick="openDayRecordsModal('${dateStr}')">
                             <span class="text-xs font-bold">${d}</span>
-                            <span class="text-[9px] font-bold mt-0.5" title="当日净盈亏">$${displayPnl}</span>
+                            <span class="text-[9px] font-bold mt-0.5" title="当日净盈亏">${sign}$${displayPnl}</span>
                             <span class="absolute top-0.5 right-1 text-[8px] opacity-60" title="交易笔数">${data.count}笔</span>
                         </div>
                     `;
@@ -1794,6 +2322,176 @@
             currentCalDate.setMonth(currentCalDate.getMonth() + offset);
             renderCalendar();
         };
+        
+        window.switchCalViewMode = function(mode) {
+            currentCalViewMode = mode;
+            const btnCal = document.getElementById('btn-view-cal');
+            const btnBar = document.getElementById('btn-view-bar');
+            const calContainer = document.getElementById('cal-view-container');
+            const barContainer = document.getElementById('bar-view-container');
+            const calControls = document.getElementById('cal-controls');
+            const barControls = document.getElementById('bar-controls');
+
+            const activeClass = "px-2 py-1 text-xs font-medium rounded-md bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm transition-all";
+            const inactiveClass = "px-2 py-1 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+
+            if (mode === 'calendar') {
+                btnCal.className = activeClass;
+                btnBar.className = inactiveClass;
+                calContainer.classList.remove('hidden');
+                calContainer.classList.add('flex');
+                barContainer.classList.add('hidden');
+                barContainer.classList.remove('flex');
+                calControls.classList.remove('hidden');
+                calControls.classList.add('flex');
+                barControls.classList.add('hidden');
+                barControls.classList.remove('flex');
+            } else {
+                btnBar.className = activeClass;
+                btnCal.className = inactiveClass;
+                barContainer.classList.remove('hidden');
+                barContainer.classList.add('flex');
+                calContainer.classList.add('hidden');
+                calContainer.classList.remove('flex');
+                barControls.classList.remove('hidden');
+                barControls.classList.add('flex');
+                
+                renderDailyBarChart();
+            }
+        }
+
+        window.updateDailyBarChart = function() {
+            if (currentCalViewMode === 'bar') {
+                renderDailyBarChart();
+            }
+        }
+
+        window.setBarPeriod = function(days) {
+            barPeriodDays = days;
+            renderDailyBarChart();
+        }
+
+        window.resetBarZoom = function() {
+            if (dailyBarChartInstance) {
+                dailyBarChartInstance.resetZoom();
+            }
+        }
+
+        function renderDailyBarChart() {
+            if (typeof Chart === 'undefined') return;
+            
+            const dailyPnl = {};
+            trades.forEach(t => {
+                if (!dailyPnl[t.date]) dailyPnl[t.date] = 0;
+                dailyPnl[t.date] += t.netPnl;
+            });
+
+            let sortedDates = Object.keys(dailyPnl).sort();
+            
+            if (barPeriodDays > 0 && sortedDates.length > 0) {
+                let maxDateStr = sortedDates[sortedDates.length - 1];
+                let maxDate = new Date(maxDateStr);
+                let minDate = new Date(maxDate);
+                minDate.setDate(minDate.getDate() - barPeriodDays + 1);
+                
+                sortedDates =[];
+                for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+                    sortedDates.push(d.toISOString().split('T')[0]);
+                }
+            } else if (sortedDates.length > 0) {
+                let minDate = new Date(sortedDates[0]);
+                let maxDate = new Date(sortedDates[sortedDates.length - 1]);
+                sortedDates =[];
+                for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+                    sortedDates.push(d.toISOString().split('T')[0]);
+                }
+            } else {
+                sortedDates = [getLocalDateString()];
+            }
+
+            const labels = [];
+            const data =[];
+            const bgColors =[];
+
+            sortedDates.forEach(date => {
+                labels.push(date.substring(5)); 
+                const pnl = dailyPnl[date] || 0;
+                data.push(pnl);
+                bgColors.push(pnl >= 0 ? '#10b981' : '#f43f5e');
+            });
+
+            const ctx = document.getElementById('dailyBarChart').getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#374151' : '#f1f5f9';
+            const tickColor = isDark ? '#9ca3af' : '#94a3b8';
+
+            if (dailyBarChartInstance) {
+                dailyBarChartInstance.destroy();
+            }
+
+            dailyBarChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets:[{
+                        label: '每日净盈亏',
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderRadius: 4,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (event, elements, chart) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            const fullDateStr = sortedDates[idx];
+                            if(dailyPnl[fullDateStr] !== undefined) {
+                                openDayRecordsModal(fullDateStr);
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { color: tickColor, callback: v => (v > 0 ? '+' : '') + '$' + Number(v).toFixed(2) },
+                            beginAtZero: true
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: tickColor, maxRotation: 45 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: c => {
+                                    const val = c.raw;
+                                    return `净盈亏: ${val >= 0 ? '+' : ''}$${Number(val).toFixed(2)}`;
+                                },
+                                title: c => {
+                                    return sortedDates[c[0].dataIndex];
+                                }
+                            }
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                            },
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'x',
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         window.openDayRecordsModal = function(dateStr) {
             document.getElementById('day-modal-title').innerText = `${dateStr} 当日记录`;
@@ -1807,7 +2505,7 @@
                 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0" onclick="openTradeDetail(${t.id}); closeDayRecordsModal();">
-                        <td class="px-4 py-3 text-gray-900 dark:text-gray-100"><span class="text-[10px] text-gray-500 dark:text-gray-400 block">${t.exchange || '-'}</span>${t.ticker}</td>
+                        <td class="px-4 py-3 text-gray-900 dark:text-gray-100"><span class="text-[10px] text-gray-500 dark:text-gray-400 block">${escapeHTML(t.exchange) || '-'}</span>${escapeHTML(t.ticker)}</td>
                         <td class="px-4 py-3">${dirBadge}</td>
                         <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-xs">${t.margin} / <span class="text-gray-400">${t.leverage}x</span></td>
                         <td class="px-4 py-3 text-right text-xs ${t.grossPnl > 0 ? 'text-emerald-500' : (t.grossPnl < 0 ? 'text-rose-500' : '')}">${t.grossPnl > 0 ? '+' : ''}${t.grossPnl.toFixed(2)}</td>
@@ -1835,14 +2533,14 @@
             
             let exitTimeStr = '-';
             if (t.exitTime) {
-                const duration = calcDurationText(t.entryTime, t.exitTime);
-                exitTimeStr = `${t.exitTime.replace('T', ' ')} (${duration})`;
+                const duration = calcDurationText(t.entryTime, t.exitTime, true);
+                exitTimeStr = `${t.exitTime.replace('T', ' ')} <span class="text-[10px] ml-2 text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">${duration}</span>`;
             }
-            document.getElementById('dt-exit-time').innerText = exitTimeStr;
+            document.getElementById('dt-exit-time').innerHTML = exitTimeStr;
             
             document.getElementById('dt-ticker').innerText = `${t.exchange || '-'} / ${t.ticker}`;
             document.getElementById('dt-direction').innerHTML = t.direction === 'long' ? '<span class="text-emerald-500 font-bold">做多 (Long)</span>' : '<span class="text-rose-500 font-bold">做空 (Short)</span>';
-            document.getElementById('dt-strategy').innerHTML = `${t.strategy || '-'}${t.tags ? ` <span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 px-1.5 py-0.5 rounded ml-2"><i class="fa-solid fa-tags mr-1"></i>${t.tags}</span>` : ''}`;
+            document.getElementById('dt-strategy').innerHTML = `${escapeHTML(t.strategy) || '-'}${t.tags ? ` <span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 px-1.5 py-0.5 rounded ml-2"><i class="fa-solid fa-tags mr-1"></i>${escapeHTML(t.tags)}</span>` : ''}`;
             
             let pnlBadge = t.pnlType === 'TP' ? '<span class="text-emerald-500 font-bold">止盈 (Take Profit)</span>' : (t.pnlType === 'SL' ? '<span class="text-rose-500 font-bold">止损 (Stop Loss)</span>' : '<span class="text-gray-500 font-bold">保本 (Breakeven)</span>');
             document.getElementById('dt-pnltype').innerHTML = pnlBadge;
@@ -1867,7 +2565,8 @@
             if (t.images && t.images.length > 0) {
                 imgSection.classList.remove('hidden');
                 t.images.forEach(src => {
-                    imgContainer.innerHTML += `<img src="${src}" class="w-full h-24 sm:h-32 object-cover rounded-lg border dark:border-gray-700 cursor-zoom-in hover:opacity-80 transition shadow-sm" onclick="viewImageFromUrl('${src}')">`;
+                    const safeUrl = ObjectUrlManager.create(src);
+                    imgContainer.innerHTML += `<img src="${safeUrl}" class="w-full h-24 sm:h-32 object-cover rounded-lg border dark:border-gray-700 cursor-zoom-in hover:opacity-80 transition shadow-sm" onclick="viewImageFromUrl('${safeUrl}')">`;
                 });
             } else {
                 imgSection.classList.add('hidden');
